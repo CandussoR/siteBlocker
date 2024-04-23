@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Web Blocker</title>
+        <style>
+            body {
+              min-width: 300px;
+              font-size: 15px;
+              margin: 0 auto;
+            }
+        
+            input {
+              margin: 5px;
+              outline: none;
+            }
+          </style>
+    </head>
+    <body>
+        <h1 id="popup-title">Your site blocker</h1>
+        <p id="host"></p>
+        <button id="add-to-group">Add this site to a group</button>
+        <button>Add this site to the restricted list</button>
+        <button onclick="window.location='page.html'">See my sites details</button>
+        <div id="sites"></div>
+        <script src="popup.js" type="module"></script>
+    </body>
+</html>
