@@ -1,4 +1,31 @@
-updateHost()
+chargeDynamicHTML()
+
+async function chargeDynamicHTML() {
+    updateHost()
+    
+    document.getElementById('redirect-to-sites')
+    .addEventListener('click', () => {
+        let url = chrome.runtime.getURL('sites/sites.html')
+        chrome.tabs.create({url : url})
+    })
+
+    let { sites = [] } = await chrome.storage.local.get('sites')
+    let currentSite = document.getElementById('host')
+    let filtered = sites.filter(el => el.site === currentSite.innerHTML)
+    if (filtered.length > 0 && filtered[0].group !== undefined) {
+        restrictedSiteInfo(currentSite)
+        document.getElementById('add-to-group').remove()
+        let newButton = document.createElement('button')
+        newButton.id = "restrictions-info"
+        newButton.innerHTML = "See infos"
+        document.getElementById('host').insertAdjacentElement("afterend", newButton)
+    }
+    else {
+        document.getElementById('add-to-group').addEventListener('click', chooseGroup)
+    }
+
+}
+
 
 async function updateHost() {
     chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
@@ -7,20 +34,14 @@ async function updateHost() {
       });
   }
 
-restrictedSiteInfo()
 
-async function restrictedSiteInfo() {
-    let { sites = [] } = await chrome.storage.local.get('sites')
-    let currentSite = document.getElementById('host')
-    let filtered = sites.filter(el => el.site === currentSite.HTML)
-    if (filtered.length > 0) {
+async function restrictedSiteInfo(currentSite) {
         let newP = document.createElement('p')
         newP.innerText = "This website is already under a restriction"
         currentSite.insertAdjacentElement("afterend", newP)
-    }
+
 }
 
-listSites().catch(error => console.error("Error caught :", error));
 
 async function listSites() {
     let { sites = []} = await chrome.storage.local.get('sites')
@@ -43,7 +64,6 @@ async function listSites() {
     }
 }
 
-document.getElementById('add-to-group').addEventListener('click', chooseGroup)
 
 async function chooseGroup() {
     let { groups = []} = await chrome.storage.local.get('groups')
@@ -99,12 +119,15 @@ function replaceButtonByGroupSelectHTML(s, groups) {
     createButton.innerHTML = "Create a new group"
     div.appendChild(createButton)
 
+    // Event
     submit.addEventListener('click', async (event) => {
         event.preventDefault()
         let select = document.getElementById('select-group')
-        let group = select.options[select.value].text
-        let host = document.getElementById('host').innerHTML
-        await addSiteToGroup(host, group)
+        if (select.options[select.selectedIndex].value !== '') {
+            let group = groups[select.options[select.selectedIndex].value].name
+            let host = document.getElementById('host').innerHTML
+            await addSiteToGroup(host, group)
+        }
     })
 
     createButton.addEventListener('click', () => replaceByCreateGroupButton(div))
