@@ -1,65 +1,72 @@
+import SlotTimeRestrictionEditor from './restrictionEditor.js'
+
 class SlotTimeRestriction extends HTMLElement {
-
-    static observedAttributes = ['rules']
-
     constructor() {
         super()
         this.isEdit = false
-        this.innerHTML = null
-    }
+        this.handleEdit = this.handleEdit.bind(this)
+     }
 
     connectedCallback() {
+        this.innerHTML = this.buildHTML()
+        const editButton = document.getElementById("restriction-edit-button")
+        editButton.addEventListener('click', this.handleEdit)
+
     }
 
     disconnectedCallback() {
     }
 
     attributeChangedCallback(name, oldValue, newValue) {
-        if (name === 'rules') this.innerHTML = this.buildHTML(JSON.parse(newValue))
-        
+        if (name === 'rules') this.innerHTML = this.buildHTML(newValue)
     }
 
     get rules() {
-        return this.getAttribute('rules')
+        let rules = this.getAttribute('rules')
+        return JSON.parse(rules)
     }
 
     set rules(r) {
         this.setAttribute('rules', r)
     }
 
-    // Rules : [ {"days" : [], "time" : [ [] ] }
-    buildHTML(rules) {
-        let restrictedTimeInDay = ``
-        for (let i=0 ; i < rules.length ; i++) {
-            restrictedTimeInDay += this.buildRestrictedTimeFor(i, rules[i]["days"], rules[i]["time"])
-        }
-
-        let html = 
-        `
+    buildHTML() {
+        return `
         <div id='time-slot-container'>
             <div id='time-slot-container__cta'>
-                <span id="edit-button" class='material-symbols-outlined'>edit</span>
-                <span id="remove-button" class='material-symbols-outlined'>remove</span>
+                <span id="restriction-edit-button" class='material-symbols-outlined'>edit</span>
+                <span id="restriction-remove-button" class='material-symbols-outlined'>remove</span>
             </div>
             <h3>Time Slots</h3>
-            ${restrictedTimeInDay}
+                ${this.rules.map((element, index) => `
+
+                    <ul id="slot-${index}">
+
+                        <li id="days-${index}"> 
+                            On ${element["days"].join(', ')} :
+
+                            <ul id="time-list-${index}">
+                                ${element["time"].map((t, i) => `
+                                    <li id="time-slot-${i}">from ${t[0]} to ${t[1]}</li>
+                                `).join('')}
+                            </ul>
+
+                        </li>
+
+                    </ul>`).join('')}
         </div>
         `
-        return html
     }
 
-    buildRestrictedTimeFor(index, day, times) {
-        let result = `<p id="day-${index}"> On ${day.join(", ")} : `
+    handleEdit() {
+        const editor = document.createElement('slot-time-restriction-editor');
 
-        for (let j=0 ; j < times.length ; j++) {
-            if (j===0) result += `from ${times[j][0]} to ${times[j][1]}`
-            else result += `, from ${times[j][0]} to ${times[j][1]}`
-        }
-
-        result += '</p>'
-        return result
+        // Set the rules attribute on the editor element
+        editor.setAttribute('rules', JSON.stringify(this.rules));
+    
+        // Replace the SlotTimeRestriction element with the SlotTimeRestrictionEditor element
+        this.parentNode.replaceChild(editor, this);  
     }
-
 }
 
 export default SlotTimeRestriction;
