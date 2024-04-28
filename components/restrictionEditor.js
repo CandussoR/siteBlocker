@@ -108,28 +108,37 @@ class SlotTimeRestrictionEditor extends HTMLElement {
         let selectedDay = select.options[select.selectedIndex].value
         this.tempRules[i].days.push(selectedDay)
         ul.insertAdjacentHTML("beforeend", `<li>${selectedDay} <span id="remove-day" class='material-symbols-outlined'>remove</span></li>`)
-        // this.setAttribute('rules', JSON.stringify(rules))
    }
 
    removeDay(e) {
-        console.log(e)
+        let iUl = e.target.closest('ul').id.split('-').pop()
+        let iLi = e.target.id.split('-').pop()
+        this.tempRules[iUl].days.splice(iLi, 1)
+        this.tempRules[iUl].days = this.sortDays(this.tempRules[iUl].days)
+        e.target.parentNode.remove()
    }
     
    // Using arrow function because "this" returns undefined if I don't. Find better.
     handleSave = async () => {
-        console.log(this.tempRules)
+        for (let i=0 ; i < this.tempRules.length ; i++) {
+            this.sortDays(this.tempRules[i].days)
+        }
+
         let { sites = {} } = await chrome.storage.local.get('sites')
         let s = sites.filter(x => x.site === this.closest('li').id)[0]
         let siteIndex = sites.findIndex(x => x === s)
         sites[siteIndex].restrictions.slots = this.tempRules
-        await chrome.storage.local.set({sites : sites})
-        const restriction = document.createElement('slot-time-restriction');
 
-        // Set the rules attribute on the editor element
+        await chrome.storage.local.set({sites : sites})
+
+        const restriction = document.createElement('restriction-item');
         restriction.setAttribute('rules', JSON.stringify(this.tempRules));
-    
-        // Replace the SlotTimeRestriction element with the SlotTimeRestrictionEditor element
-        this.parentNode.replaceChild(restriction, this); 
+        this.replaceWith(restriction)
+    }
+
+    sortDays(unsorted) {
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+        return unsorted.sort((a,b) => days.indexOf(a) - days.indexOf(b))
     }
 }
 
