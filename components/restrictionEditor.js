@@ -11,7 +11,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
 
         const addDayButtons = document.querySelectorAll("span[id^='add-day-']")
         addDayButtons.forEach(button => {
-            button.addEventListener('click', (e) => this.addDayInput(e)); // Add event listener to each "add day" button
+            button.addEventListener('click', (e) => this.addDayInput(e));
         });
 
         const removeDayButtons = document.querySelectorAll("span[id^='remove-day-']")
@@ -21,6 +21,9 @@ class SlotTimeRestrictionEditor extends HTMLElement {
 
         const saveButton = document.getElementById('done')
         saveButton.addEventListener('click', this.handleSave)
+
+        const cancelButton = document.getElementById('cancel')
+        cancelButton.addEventListener('click', this.handleCancel)
     }
 
     disconnectedCallback() {
@@ -133,6 +136,12 @@ class SlotTimeRestrictionEditor extends HTMLElement {
 
         const restriction = document.createElement('restriction-item');
         restriction.setAttribute('rules', JSON.stringify(this.tempRules));
+        this.replaceWith(restriction)
+    }
+
+    handleCancel = () => {
+        const restriction = document.createElement('restriction-item')
+        restriction.setAttribute('rules', JSON.stringify(this.rules))
         this.replaceWith(restriction)
     }
 
