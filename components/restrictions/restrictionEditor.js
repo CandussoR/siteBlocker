@@ -33,7 +33,10 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     });
 
     const dayColumns = document.querySelectorAll("div[id^='card-'][id$='-times']")
-    dayColumns.forEach((column) => column.addEventListener("change", (e) => this.updateSlotTimes(e) ))
+    dayColumns.forEach((column) => column.addEventListener("change", (e) => {
+      console.log("change detected in list of slots")
+      this.updateSlotTimes(e)
+   } ))
 
     const removeTimeSlotButton = document.querySelectorAll(
       "span[id^='remove-time-']"
@@ -197,56 +200,48 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     const lastLi = ul.querySelectorAll('li').length
 
     const newLi = `<li>
-                        <input id="time-list-${lastLi}-0" type="time" value=""> - <input id="time-list-${lastLi}" type="time" value="">
+                        <input id="time-list-${lastLi}-0" type="time" value=""> - <input id="time-list-${lastLi}-1" type="time" value="">
                         <span id="remove-time-${lastLi}" class='material-symbols-outlined'>remove</span>
                     </li>`
     ul.insertAdjacentHTML("beforeend", newLi)
     this.tempRestrictions.timeSlot[i].time.push(["", ""])
+    
   }
 
   addNewRestriction(event) {
-    console.log(event.target, event.target.value)
     let keys = this.tempRestrictions ? Object.keys(this.tempRestrictions) : []
     let type = event.target.value
     let idType = this.idMapping[type]
     let titleType = this.titleMapping[type]
-    console.log(keys, type, idType)
 
     if (keys.length === 0) {
+
       this.tempRestrictions = {}
       this.insertAdjacentHTML("beforeend", "<div id='restrictions-container'></div>")
       this.querySelector('#restrictions-container').insertAdjacentHTML("beforeend", `<div id="${idType}-container"><h3>${titleType}</h3></div>`)
       let created = this.querySelector(`#${idType}-container`)
       this.addRestrictionCardIn(created, type)
       this.updateTempRestrictions("create", type)
-    }
 
+    } else if (!keys.includes(type)) {
 
-    else if (!keys.includes(type)) {
       this.querySelector('#restrictions-container').insertAdjacentHTML("beforeend", `<div id="${idType}-container"><h3>${titleType}</h3></div>`)
       let created = this.querySelector(`#${idType}-container`)
       this.addRestrictionCardIn(created, type)
       this.updateTempRestrictions("create", type)
-    }
+      
+    } else {
 
-    else {
       let i = this.tempRestrictions[type].length
       let container = this.querySelector(`#${idType}-container`)
       this.addRestrictionCardIn(container, type, i)
       this.updateTempRestrictions("add", type, i)
+
     }
   }
 
-  createNewRestrictionContainer(id) {
-    switch (id) {
-      case 'time-slot' :
-        return `<div id='time-slot-container'><h3>Time Slots</h3></div>`
-      case 'total-time':
-        return `<div id='total-time-container'><h3>Total Time</h3></div>`
-      case 'consecutive-time':
-        return `<div id='consecutive-time-container'><h3>Total Time</h3></div>`
-    }
-
+  createNewRestrictionContainer(type) {
+    return `<div id='${this.idMapping[type]}'><h3>${this.titleMapping[type]}</h3>`
   }
 
   addRestrictionCardIn(baseElement, type, index = 0) {
@@ -268,6 +263,10 @@ class SlotTimeRestrictionEditor extends HTMLElement {
             baseElement.insertAdjacentHTML("beforeend", html)
             this.querySelector(`#add-day-${index}`).addEventListener("click", (e) => this.addDayInput(e))
             this.querySelector(`#add-time-${index}`).addEventListener("click", (e) => this.addTimeSlot(e))
+            this.querySelector(`div#card-${index}-times`).addEventListener("change", (e) => {
+              console.log("change detected in list of slots")
+              this.updateSlotTimes(e)
+           } )
             break;
         case ('totalTime') :
             break;
@@ -337,7 +336,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
   updateSlotTimes(event) {
     let i = event.target.closest("ul").id.split("-").pop();
     const [a,b, slotIndex, inputIndex] = event.target.id.split('-')
-    this.tempRestrictions[i].time[slotIndex][inputIndex] = event.target.value
+    this.tempRestrictions.timeSlot[i].time[slotIndex][inputIndex] = event.target.value
   }
 
   handleCancel = () => {
@@ -356,7 +355,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
 
     for (const key of keys) {
       for (let i = 0; i < this.tempRestrictions[key].length; i++) {
-        this.sortDays(this.tempRestrictions.key[i].days);
+        this.sortDays(this.tempRestrictions[key][i].days);
       }
     }
     return this.tempRestrictions
