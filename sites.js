@@ -1,10 +1,10 @@
 export const template_sites = [
     {
-        "site": "www.youtube.com",
+        "name": "www.youtube.com",
         "restrictions": {
-            "slots": [
+            "timeSlot": [
                 {
-                    "days": [0, 1, 2, 4, 5],
+                    "days": ["Monday", "Tuesday", "Thursday", "Friday"],
                     "time": [
                         ["00:00:00", "12:00:00"],
                         ["13:30:00", "18:00:00"],
@@ -14,8 +14,8 @@ export const template_sites = [
             ]
         },
     },
-    { "site": "www.chess.com", "restrictions": null },
-    { "site": "www.instagram.com", "restrictions": null },
-    { "site": "www.facebook.com", "restrictions": null },
-    { "site": "www.tiktok.com", "restrictions": null }
+    { "name": "www.chess.com", "restrictions": null },
+    { "name": "www.instagram.com", "restrictions": null },
+    { "name": "www.facebook.com", "restrictions": null },
+    { "name": "www.tiktok.com", "restrictions": null }
 ]

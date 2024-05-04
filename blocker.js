@@ -25,7 +25,7 @@ async function getRestrictedSites() {
 }
 
 function isRestricted(site, sites) {
-    let sitesName = sites.map(x => x.site)
+    let sitesName = sites.map(x => x.name)
     if (!sitesName.includes(site)) { return false; }
 
     const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
@@ -34,7 +34,7 @@ function isRestricted(site, sites) {
     let siteIndex = sitesName.findIndex(x => x === site)
     let restrictions = sites[siteIndex].restrictions
 
-    if (restrictions.slots) { return checkSlots(restrictions.slots, currentDay, currentTime) }
+    if (restrictions.timeSlot) { return checkSlots(restrictions.timeSlot, currentDay, currentTime) }
 
     return false
 }
@@ -49,7 +49,7 @@ function checkSlots(slots, currentDay, currentTime) {
                     return true
                 }
                 else if (currentTime > spans[j][0] && currentTime < spans[j][1]) {
-                    console.log("yes")
+                    console.log("yes it should be blocked")
                     return true
                 }
             }
