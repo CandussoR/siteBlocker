@@ -93,7 +93,7 @@ class GroupEditor extends HTMLElement {
   }
 
   addSiteToGroup(e) {
-    console.log(this.tempSites)
+    console.log("adding to group", this.tempSites)
     let siteIndex = this.tempSites.findIndex(x => x.name === e.target.value)
     console.log(siteIndex)
     this.tempSites[siteIndex]["group"] = this.tempGroup.name
@@ -113,9 +113,12 @@ class GroupEditor extends HTMLElement {
   }
 
   removeFromGroup(e) {
+    let indexLi = e.target.id.split('-').pop()
+    delete this.tempSites[indexLi].group
   }
 
   deleteTempLi(e) {
+    e.target.parentNode.remove()
   }
 
   updateGroupName(e) {
@@ -130,7 +133,8 @@ class GroupEditor extends HTMLElement {
 
     let groups = await chrome.storage.local.get('groups')
     groups[this.index] = {"name": this.tempGroup.name, "restrictions" : this.querySelector('restriction-editor').getModifiedData()}
-
+    console.log(groups)
+    // await chrome.storage.local.set({groups : groups})
   }
 }
 
