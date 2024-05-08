@@ -16,15 +16,14 @@ class GroupEditor extends HTMLElement {
     this.buildHTML();
 
     this.querySelector('#group-name').addEventListener('change', (e) => this.updateGroupName(e))
-    console.log(this.innerHTML, this.querySelector('#submit'))
     this.querySelector('#submit').addEventListener('click', (e) => this.handleSubmit(e))
     this.querySelector('#cancel').addEventListener('click', () => this.handleCancel())
     let addSite = this.querySelector('#add-site')
     if (addSite !== null) this.querySelector('#add-site').addEventListener('click', () => this.createSiteSelect())
   }
 
-  get index() { return this.getAttribute("i"); }
-  set index(i) { return this.setAttribute("i", i); }
+  get index() { return this.getAttribute("index"); }
+  set index(i) { return this.setAttribute("index", i); }
 
   get name() { return this.getAttribute("name"); }
   set name(n) { this.setAttribute("name", n); }
@@ -52,7 +51,6 @@ class GroupEditor extends HTMLElement {
             </div>
         `;
 
-      let label = this.querySelector("sites-label")
 
       if (this.sites.length === 0) {
         this.createSiteSelect()
@@ -130,11 +128,26 @@ class GroupEditor extends HTMLElement {
 
   async handleSubmit(e) {
     e.preventDefault()
+    let data = await chrome.storage.local.get('groups')
+    console.log("groups before insert")
+    data.groups[this.index] = {"name": this.tempGroup.name, "restrictions" : this.querySelector('restriction-editor').getModifiedData()}
+    console.log("groups after insert", data)
+    try {
+      await chrome.storage.local.set({'groups' : groups})
+      await chrome.storage.local.set({sites : this.tempSites})
+      console.log('Data saved successfully.');
+  } catch (error) {
+      console.error('Error saving data:', error);
+  }
 
-    let groups = await chrome.storage.local.get('groups')
-    groups[this.index] = {"name": this.tempGroup.name, "restrictions" : this.querySelector('restriction-editor').getModifiedData()}
-    console.log(groups)
-    // await chrome.storage.local.set({groups : groups})
+    let groupComp = document.createElement('a-group')
+    groupComp.setAttribute('id', 'group-' + this.index)
+    groupComp.setAttribute('name', this.tempGroup.name)
+    let r = this.querySelector('restriction-editor').getModifiedData()
+    if (r) groupComp.setAttribute('restrictions', JSON.stringify(r))
+    groupComp.setAttribute('index', this.index)
+    
+    this.replaceWith(groupComp)
   }
 }
 
