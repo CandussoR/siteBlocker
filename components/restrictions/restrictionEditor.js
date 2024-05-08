@@ -1,5 +1,3 @@
-console.log("loading restriction editor")
-
 class SlotTimeRestrictionEditor extends HTMLElement {
   constructor() {
     super();
@@ -190,7 +188,9 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     let select = document.getElementById("select-day");
     let selectedDay = select.options[select.selectedIndex].value;
     this.tempRestrictions.timeSlot[i].days.push(selectedDay);
-    ul.insertAdjacentHTML( "beforeend", `<li>${selectedDay} <span id="remove-day" class='material-symbols-outlined'>remove</span></li>`);
+    let newIndex = this.tempRestrictions.timeSlot[i].days.length
+    ul.insertAdjacentHTML( "beforeend", `<li>${selectedDay} <span id="remove-day-${newIndex}" class='material-symbols-outlined'>remove</span></li>`);
+    this.querySelector(`#remove-day-${newIndex}`).addEventListener('click', (e) => this.removeDay(e))
   }
 
   addTimeSlot(e) {
@@ -205,7 +205,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
                     </li>`
     ul.insertAdjacentHTML("beforeend", newLi)
     this.tempRestrictions.timeSlot[i].time.push(["", ""])
-    
+    this.querySelector(`remove-time-${lastLi}`).addEventListener('click', (e) => this.removeTimeSlot(e))
   }
 
   addNewRestriction(event) {
@@ -263,14 +263,43 @@ class SlotTimeRestrictionEditor extends HTMLElement {
             baseElement.insertAdjacentHTML("beforeend", html)
             this.querySelector(`#add-day-${index}`).addEventListener("click", (e) => this.addDayInput(e))
             this.querySelector(`#add-time-${index}`).addEventListener("click", (e) => this.addTimeSlot(e))
-            this.querySelector(`div#card-${index}-times`).addEventListener("change", (e) => {
-              console.log("change detected in list of slots")
-              this.updateSlotTimes(e)
-           } )
+            this.querySelector(`div#card-${index}-times`).addEventListener("change", (e) => this.updateSlotTimes(e))
             break;
         case ('totalTime') :
+          html += `<div id="total-time-card-${index}" class="total-time-card">
+                    <div id="card-${index}-days" class="day-column">
+                        <h4>For days</h4>
+                        <ul id="day-list-${index}"></ul>
+                        <span id="add-day-${index}" class="add-day material-symbols-outlined"> add </span>
+                    </div>
+                    <div id="card-${index}-times" class="time-column">
+                        <h4>Total Time</h4>
+                        <input id="total-time-${index}" type="number">
+                    </div>
+                </div>`
+            baseElement.insertAdjacentHTML("beforeend", html)
+            this.querySelector(`#add-day-${index}`).addEventListener("click", (e) => this.addDayInput(e))
+            this.querySelector(`#total-time-${index}`).addEventListener("change", (e) => this.setTimeInMinutes(e, "totalTime", index))
             break;
         case ('consecutiveTime'):
+          html += `<div id="consecutive-time-card-${index}" class="total-time-card">
+                    <div id="card-${index}-days" class="day-column">
+                        <h4>For days</h4>
+                        <ul id="day-list-${index}"></ul>
+                        <span id="add-day-${index}" class="add-day material-symbols-outlined"> add </span>
+                    </div>
+                    <div id="card-${index}-times" class="time-column">
+                        <h4>Max time before the pause</h4>
+                        <label for="consecutive-time-${index}">Max time straight :</label>
+                        <input id="consecutive-time-${index}" name="consecutive-time-${index}" type="number">
+                        <label for="pause-${index}">Pause :</label>
+                        <input id="pause-${index}" name="pause-${index}" type="number">
+                    </div>
+                </div>`
+            baseElement.insertAdjacentHTML("beforeend", html)
+            this.querySelector(`#add-day-${index}`).addEventListener("click", (e) => this.addDayInput(e))
+            this.querySelector(`#consecutive-time-${index}`).addEventListener("change", (e) => this.setTimeInMinutes(e, 'consecutiveTime', index, 'max'))
+            this.querySelector(`#pause-${index}`).addEventListener("change", (e) => this.setTimeInMinutes(e, 'consecutiveTime', index, 'pause'))
             break;
         default:
             console.error("Inexisting type", type)
@@ -289,49 +318,29 @@ class SlotTimeRestrictionEditor extends HTMLElement {
       this.tempRestrictions[restrictionType] = [ init[restrictionType] ]
     } else if (updateType === 'add') {
       this.tempRestrictions[restrictionType].push(init[restrictionType])
+    } else if (updateType === 'remove') {
+      this.tempRestrictions[restrictionType].splice(index, 1)
     }
-
-    console.log("after switch", this.tempRestrictions)
   }
 
   removeTimeSlot(e) {
+    let id =  e.target.closest(`div[id$='-container']`).id.split('-').slice(0,2).join('-')
+    let type = Object.keys(this.idMapping).find(x => this.idMapping[x] === id)
     let ulIndex = e.target.closest('ul').id.split('-').pop()
     let i = e.target.id.split('-').pop()
-    this.tempRestrictions[ulIndex].time.splice(i, 1)
+    this.tempRestrictions[type][ulIndex].time.splice(i, 1)
     e.target.parentNode.remove()
   }
 
   removeDay(e) {
+    let id =  e.target.closest(`div[id$='-container']`).id.split('-').slice(0,2).join('-')
+    let type = Object.keys(this.idMapping).find(x => this.idMapping[x] === id)
     let iUl = e.target.closest("ul").id.split("-").pop();
     let iLi = e.target.id.split("-").pop();
-    this.tempRestrictions[iUl].days.splice(iLi, 1);
-    this.tempRestrictions[iUl].days = this.sortDays(this.tempRestrictions[iUl].days);
+    this.tempRestrictions[type][iUl].days.splice(iLi, 1);
+    this.tempRestrictions[type][iUl].days = this.sortDays(this.tempRestrictions[type][iUl].days);
     e.target.parentNode.remove();
   }
-
-  // Using arrow function because "this" returns undefined if I don't. Find better.
-  handleSave = async () => {
-    
-    this.tempRestrictions.forEach(el => {
-        el.time.forEach(slot => {
-            if (slot[0] === '' || slot[1] === '') {
-                console.error("Some times are missing.")
-                return;
-            }
-        })}
-    )
-
-    let { sites = {} } = await chrome.storage.local.get("sites");
-    let s = sites.filter((x) => x.site === this.closest("li").id)[0];
-    let siteIndex = sites.findIndex((x) => x === s);
-    sites[siteIndex].restrictions.timeSlot = this.tempRestrictions;
-
-    await chrome.storage.local.set({ sites: sites });
-
-    const restriction = document.createElement("restriction-item");
-    restriction.setAttribute("rules", JSON.stringify(this.tempRestrictions));
-    this.replaceWith(restriction);
-  };
 
   updateSlotTimes(event) {
     let i = event.target.closest("ul").id.split("-").pop();
@@ -352,6 +361,8 @@ class SlotTimeRestrictionEditor extends HTMLElement {
 
   getModifiedData() {
     let keys = Object.keys(this.tempRestrictions)
+
+    if (keys.length === 0) return ;
 
     for (const key of keys) {
       for (let i = 0; i < this.tempRestrictions[key].length; i++) {

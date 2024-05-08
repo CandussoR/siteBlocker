@@ -38,13 +38,14 @@ class GroupEditor extends HTMLElement {
     this.innerHTML = `
             <div id="${this.name}-editor">
               <form id="group-form" method="post">
-                <input type="text" value="${ this.tempGroup.name }" id="group-name">
+                <label for="group-name">Name :</label>
+                <input name="group-name" type="text" value="${ this.tempGroup.name }" id="group-name">
                 <div id="group-sites">
                 <span class="sites-label">Sites : </span>
                   <ul id="sites-in-group"></ul>
                   <span id="add-site" class="material-symbols-outlined">add</span>
                 </div>
-                <restriction-editor restrictions="${JSON.stringify(this.restrictions)}"></restriction-editor>
+                <restriction-editor restrictions='${JSON.stringify(this.restrictions)}'></restriction-editor>
                 <input id="submit" type="submit" value="Save modifications">
                 <button id="cancel">Cancel</button>
               </form>
@@ -128,12 +129,12 @@ class GroupEditor extends HTMLElement {
 
   async handleSubmit(e) {
     e.preventDefault()
-    let data = await chrome.storage.local.get('groups')
+    let {groups = []} = await chrome.storage.local.get('groups')
     console.log("groups before insert")
-    data.groups[this.index] = {"name": this.tempGroup.name, "restrictions" : this.querySelector('restriction-editor').getModifiedData()}
-    console.log("groups after insert", data)
+    groups[this.index] = {"name": this.tempGroup.name, "restrictions" : this.querySelector('restriction-editor').getModifiedData()}
+    console.log("groups after insert", groups)
     try {
-      await chrome.storage.local.set({'groups' : groups})
+      await chrome.storage.local.set({groups : groups})
       await chrome.storage.local.set({sites : this.tempSites})
       console.log('Data saved successfully.');
   } catch (error) {

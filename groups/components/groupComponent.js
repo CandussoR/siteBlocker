@@ -1,4 +1,5 @@
 import '../components/groupEditor.js'
+import '../../components/restrictions/restriction.js'
 
 class GroupComponent extends HTMLElement {
     constructor() {
@@ -7,11 +8,13 @@ class GroupComponent extends HTMLElement {
 
     async connectedCallback() {
         console.log("connected a group comp")
+        console.log("restrictions in groupComponent", this.restrictions)
         let sites = await chrome.storage.local.get('sites')
         console.log("sites", sites)
         this.sites = sites.sites.filter(x => x.group === this.name)
         console.log("this sites", this.sites)
-        this.innerHTML = this.buildHTML()
+        this.innerHTML = null
+        this.buildHTML()
         this.querySelector('#edit-button').addEventListener('click', () => this.replaceComponent())
         this.querySelector('#remove-button').addEventListener('click', (e) => this.dispatchEvent(new Event('delete-group', {bubbles : true, composed : true} )))
     }
@@ -30,7 +33,7 @@ class GroupComponent extends HTMLElement {
 
     buildHTML() {
         console.log(this.sites)
-        return `
+        this.innerHTML = `
             <div id='${this.name}'>
                 <div id='${this.name}-buttons'>
                     <span id="edit-button" class='material-symbols-outlined'>edit</span>
@@ -42,9 +45,13 @@ class GroupComponent extends HTMLElement {
                   <p id="site-listing"><span class="sites-label">Sites : </span>
                     ${this.sites.length !== 0 ? this.sites.map(s => s.name).join(', ') : 'No site yet.'}</p>
                     </p>
-                    ${this.restrictions ? `<restriction-item restrictions="${JSON.stringify(this.restrictions)}" />` : ''}
-                </div>
-                `
+                    </div>
+                    `
+        let div = this.querySelector(`#${this.name}`)
+        console.log(this.restrictions? "yep" : "nope")
+        if (this.restrictions) {
+            div.insertAdjacentHTML("beforeend", `<restriction-item restrictions='${JSON.stringify(this.restrictions)}' />`)
+        }
     }
 
     replaceComponent() {

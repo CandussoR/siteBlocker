@@ -89,4 +89,5 @@ class SlotTimeRestriction extends HTMLElement {
     }
 }
 
+customElements.define('restriction-item', SlotTimeRestriction)
 export default SlotTimeRestriction;
