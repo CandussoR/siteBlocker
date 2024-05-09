@@ -9,20 +9,29 @@ async function chargeDynamicHTML() {
         chrome.tabs.create({url : url})
     })
 
+    
+    document.getElementById('redirect-to-groups')
+    .addEventListener('click', () => {
+        let url = chrome.runtime.getURL('groups/groups.html')
+        chrome.tabs.create({url : url})
+    })
+
     let { sites = [] } = await chrome.storage.local.get('sites')
     let currentSite = document.getElementById('host')
-    let filtered = sites.filter(el => el.site === currentSite.innerHTML)
-    if (filtered.length > 0 && filtered[0].group !== undefined) {
-        restrictedSiteInfo(currentSite)
-        document.getElementById('add-to-group').remove()
-        let newButton = document.createElement('button')
-        newButton.id = "restrictions-info"
-        newButton.innerHTML = "See infos"
-        document.getElementById('host').insertAdjacentElement("afterend", newButton)
-    }
-    else {
+    let filtered = sites.filter(el => el.name === currentSite.innerHTML)
+    if (filtered.length === 0) {
+        console.log("not filtered")
         document.getElementById('add-to-group').addEventListener('click', chooseGroup)
+        document.getElementById('add-to-sites').addEventListener('click', addSite)
+        return;
     }
+        
+    let alreadyRestricted = document.createElement('p')
+    alreadyRestricted.textContent = "This site is already restricted."
+    currentSite.replaceWith(alreadyRestricted)
+    document.getElementById('add-to-sites').remove()
+
+    if (filtered[0].group !== undefined) { document.getElementById('add-to-group').remove() }
 
 }
 
@@ -33,14 +42,6 @@ async function updateHost() {
         document.getElementById('host').innerHTML = activeTabUrl.host;
       });
   }
-
-
-async function restrictedSiteInfo(currentSite) {
-        let newP = document.createElement('p')
-        newP.innerText = "This website is already under a restriction"
-        currentSite.insertAdjacentElement("afterend", newP)
-
-}
 
 
 async function listSites() {
@@ -180,14 +181,31 @@ async function initializeGroupWithSite(group, site) {
 
     await addSiteToGroup(site, group)
     location.reload()
-
 }
 
 async function addSiteToGroup(host, groupName) {
+
     let { sites = [] } = await chrome.storage.local.get('sites')
-    sites.push({"site" : host, 
-                "restrictions" : null,
-                "group": groupName})
+
+    let siteIndex = sites.findIndex(s => s.name === host)
+    if (siteIndex !== -1) {
+        sites[siteIndex]["group"] = groupName
+    } else {
+        sites.push({"name" : host, 
+                    "restrictions" : null,
+                    "group": groupName})
+    }
+
+    await chrome.storage.local.set({sites : sites})
+    location.reload()
+}
+
+
+async function addSite() {
+    let { sites = [] } = await chrome.storage.local.get('sites')
+    let host = document.getElementById('host').innerHTML;
+    sites.push({"name" : host, 
+    "restrictions" : null })
     await chrome.storage.local.set({sites : sites})
     location.reload()
 }
