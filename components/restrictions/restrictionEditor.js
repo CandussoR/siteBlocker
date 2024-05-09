@@ -11,6 +11,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     this.tempRestrictions = this.restrictions || {};
     console.log("restrictions received in restriction-editor", JSON.stringify(this.restrictions))
     this.innerHTML = this.buildHTML();
+
     const addDayButtons = document.querySelectorAll("span[id^='add-day-']");
     addDayButtons.forEach((button) => {
       button.addEventListener("click", (e) => this.addDayInput(e));
@@ -32,7 +33,6 @@ class SlotTimeRestrictionEditor extends HTMLElement {
 
     const dayColumns = document.querySelectorAll("div[id^='card-'][id$='-times']")
     dayColumns.forEach((column) => column.addEventListener("change", (e) => {
-      console.log("change detected in list of slots")
       this.updateSlotTimes(e)
    } ))
 
@@ -44,6 +44,8 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     });
 
     this.querySelector("#select-restriction").addEventListener('change', (e) => this.addNewRestriction(e))
+
+    
   }
 
   disconnectedCallback() {
@@ -67,8 +69,9 @@ class SlotTimeRestrictionEditor extends HTMLElement {
   buildHTML() {
     let keys = Object.keys(this.tempRestrictions)
     let html = `<div id="restrictions-container">
+    <h2> Restrictions </h2
     <div id='new-restriction'>
-      <label for='select-restriction'>New restriction ?</label>
+      <label for='select-restriction'>New restriction card : </label>
       <select id="select-restriction" name='select-restriction'>
         <option value='' selected>--Choose a restriction--</option>
         <option value='timeSlot'>Time Slots</option>
@@ -78,7 +81,6 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     </div>
     `
 
-    console.log("are there not-restrictions?", !this.tempRestrictions)
     if (!this.tempRestrictions) {
       html += "</div>"
       return html
@@ -87,7 +89,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     if (keys.includes('timeSlot')) {
       html += `
       <div id='time-slot-container'>
-      <h3>Time Slots</h3>
+          <h3>Time Slots</h3>
         ${this.tempRestrictions.timeSlot
           .map(
             (element, index) => `
@@ -130,7 +132,8 @@ class SlotTimeRestrictionEditor extends HTMLElement {
 
       if (keys.includes('totalTime')) {
         html += `<div id="total-time-container">
-                  ${this.tempRestrictions.totalTime
+          <h3>Total Time</h3>
+        ${this.tempRestrictions.totalTime
                       .map((el, index) =>
                         `<p id="total-time-${index}-days">On ${el.days.join('')} for ${el.totalTime} minutes.</p>`
                   ).join('')}
@@ -138,12 +141,19 @@ class SlotTimeRestrictionEditor extends HTMLElement {
       }
 
       if (keys.includes('consecutiveTime')) {
-        console.log("consecutiveTime")
+        console.log("consecutiveTime");
+
         html += `<div id="consecutive-time-container">
+          <h3>Consecutive Time</h3>
         ${this.tempRestrictions.consecutiveTime
           .map(
             (el, index) =>
-              `<p id="total-time-${index}-days">On ${el.days.join("")}, ${ el.consecutiveTime } consecutive minutes max with ${ el.pause } minutes pause between.</p>`)
+              `<p id="total-time-${index}-days">On ${el.days.join("")}, ${
+                el.consecutiveTime
+              } consecutive minutes max with ${
+                el.pause
+              } minutes pause between.</p>`
+          )
           .join("")}
        </div>`;
       }
@@ -189,8 +199,18 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     let selectedDay = select.options[select.selectedIndex].value;
     this.tempRestrictions.timeSlot[i].days.push(selectedDay);
     let newIndex = this.tempRestrictions.timeSlot[i].days.length
-    ul.insertAdjacentHTML( "beforeend", `<li>${selectedDay} <span id="remove-day-${newIndex}" class='material-symbols-outlined'>remove</span></li>`);
-    this.querySelector(`#remove-day-${newIndex}`).addEventListener('click', (e) => this.removeDay(e))
+
+    let listItem = document.createElement('li');
+    listItem.textContent = selectedDay;
+    let removeButton = document.createElement('span');
+    removeButton.classList.add('material-symbols-outlined');
+    removeButton.textContent = 'remove';
+    removeButton.id = `remove-day-${newIndex}`;
+    listItem.appendChild(removeButton);
+    
+    ul.appendChild(listItem);
+    
+    removeButton.addEventListener('click', (e) => this.removeDay(e));
   }
 
   addTimeSlot(e) {
@@ -205,7 +225,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
                     </li>`
     ul.insertAdjacentHTML("beforeend", newLi)
     this.tempRestrictions.timeSlot[i].time.push(["", ""])
-    this.querySelector(`remove-time-${lastLi}`).addEventListener('click', (e) => this.removeTimeSlot(e))
+    this.querySelector(`#remove-time-${lastLi}`).addEventListener('click', (e) => this.removeTimeSlot(e))
   }
 
   addNewRestriction(event) {
@@ -243,6 +263,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
   createNewRestrictionContainer(type) {
     return `<div id='${this.idMapping[type]}'><h3>${this.titleMapping[type]}</h3>`
   }
+  
 
   addRestrictionCardIn(baseElement, type, index = 0) {
     let html = ""
@@ -323,6 +344,8 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     }
   }
 
+
+
   removeTimeSlot(e) {
     let id =  e.target.closest(`div[id$='-container']`).id.split('-').slice(0,2).join('-')
     let type = Object.keys(this.idMapping).find(x => this.idMapping[x] === id)
@@ -333,6 +356,7 @@ class SlotTimeRestrictionEditor extends HTMLElement {
   }
 
   removeDay(e) {
+    console.log("clicked", e)
     let id =  e.target.closest(`div[id$='-container']`).id.split('-').slice(0,2).join('-')
     let type = Object.keys(this.idMapping).find(x => this.idMapping[x] === id)
     let iUl = e.target.closest("ul").id.split("-").pop();

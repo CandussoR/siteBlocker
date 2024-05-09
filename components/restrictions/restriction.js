@@ -7,8 +7,14 @@ class SlotTimeRestriction extends HTMLElement {
      }
 
     connectedCallback() {
-        this.innerHTML = this.buildHTML()
-        console.log("restrictions sent from a-site to restriction-item", JSON.stringify(this.restrictions))
+        console.log('type is' , this.itemType)
+      this.innerHTML = this.buildHTML();
+
+      const removeSlotButton = document.querySelectorAll( "span[id^='remove-slot-']");
+
+      removeSlotButton.forEach((button) => {
+        button.addEventListener("click", (e) => this.removeSlotCard(e));
+      });
     }
 
     disconnectedCallback() {
@@ -27,10 +33,13 @@ class SlotTimeRestriction extends HTMLElement {
         this.setAttribute('restrictions', r)
     }
 
+    get itemType() { return this.getAttribute('item-type') }
+    set itemType(t) { this.setAttribute('item-type', t) }
+
     buildHTML() {
         let html = ``
         let keys = Object.keys(this.restrictions) || []
-        if (keys.length === 0) return;
+        if (keys.length === 0) return '<p>No restriction yet, click on the update icon to add one.</p>';
 
         if (keys.includes('timeSlot')) {
             html += `
@@ -87,6 +96,24 @@ class SlotTimeRestriction extends HTMLElement {
         editor.setAttribute('restrictions', JSON.stringify(this.restrictions));
         this.parentNode.replaceChild(editor, this);  
     }
+
+    async removeSlotCard(e) {
+        let ul = e.target.closest('ul')
+        let id = ul.id.split('-').pop()
+        if (this.itemType === 'group') {
+            let groupIndex = this.closest('a-group').index
+            let { groups } = await chrome.storage.local.get('groups')
+            groups[groupIndex].restrictions.timeSlot.splice(id,1)
+            await chrome.storage.local.set({groups : groups})
+        } else if (this.itemType === 'site') {
+            let siteIndex = this.closest('a-site').index
+            let { sites } = await chrome.storage.local.get('sites')
+            console.log(sites, sites[siteIndex])
+            sites[siteIndex].restrictions.timeSlot.splice(id,1)
+            await chrome.storage.local.set({sites : sites}) 
+        }
+        ul.remove()
+      }
 }
 
 customElements.define('restriction-item', SlotTimeRestriction)

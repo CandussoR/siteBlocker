@@ -11,7 +11,8 @@ document.querySelector('#create-group-button').addEventListener('click', async (
 
     let inputValue = document.getElementById("new-group").value
 
-    if (checkDuplicateValue(groups, inputValue)) {
+    let isDuplicate = await checkDuplicateValue(groups, inputValue)
+    if (isDuplicate) {
         document.querySelector('form').insertAdjacentHTML("beforeend", "<p id='error'>There is already a group with this name.</p>")
         return ;
     }
@@ -28,6 +29,7 @@ document.querySelector('#create-group-button').addEventListener('click', async (
 async function checkDuplicateValue(v) {
     let {groups = []} = await chrome.storage.local.get('groups')
     if (groups.length === 0) {
+        console.log("no groups")
         return false;
     } else if (groups.findIndex(el => el.name === v) !== -1) {
         return true ;

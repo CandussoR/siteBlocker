@@ -50,7 +50,7 @@ class GroupComponent extends HTMLElement {
         let div = this.querySelector(`#${this.name}`)
         console.log(this.restrictions? "yep" : "nope")
         if (this.restrictions) {
-            div.insertAdjacentHTML("beforeend", `<restriction-item restrictions='${JSON.stringify(this.restrictions)}' />`)
+            div.insertAdjacentHTML("beforeend", `<restriction-item item-type="group" restrictions='${JSON.stringify(this.restrictions)}' />`)
         }
     }
 

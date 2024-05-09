@@ -8,17 +8,15 @@ class SiteComponent extends HTMLElement {
         this.innerHTML = this.buildHTML()
 
         this.querySelector('#edit-button').addEventListener('click', () => this.handleEdit())
-    }
-
-    disconnectedCallback() {
-    }
-
-    attributeChangeCallback(name, oldValue, newValue) {
+        this.querySelector('#remove-button').addEventListener('click', () => this.handleRemove())
     }
 
     get name() { return this.getAttribute('name'); }
     set name(n) { this.setAttribute('name', n); }
 
+    get index() { return this.getAttribute('index') }
+    set index(i) { return this.setAttribute('index', i) }
+    
     get group() { return this.getAttribute('group'); }
     set group(g) { this.setAttribute('group', g); }
 
@@ -46,12 +44,22 @@ class SiteComponent extends HTMLElement {
             return  this.innerHTML
         }
 
-        this.querySelector('#group-name').insertAdjacentHTML("afterend", `<restriction-item restrictions=${JSON.stringify(this.restrictions)} />`)
+        this.querySelector('#group-name').insertAdjacentHTML("afterend", `<restriction-item item-type="site" restrictions=${JSON.stringify(this.restrictions)} />`)
 
         return this.innerHTML
     }
 
-    handleRemove() {
+    async handleRemove() {
+        let siteName = this.querySelector('#site-name').textContent.trim()
+
+        let { sites = [] } = await chrome.storage.local.get('sites')
+        console.log("sites before", sites)
+        let siteIndex = sites.findIndex(s => s.name === siteName)
+        sites.splice(siteIndex, 1)
+        console.log("sites after", sites)
+        await chrome.storage.local.set({ sites : sites })
+
+        this.remove()
     }
 
     handleEdit() {
@@ -60,10 +68,6 @@ class SiteComponent extends HTMLElement {
         editor.setAttribute("name", this.name)
         if (this.group) editor.setAttribute("group", this.group)
         this.replaceWith(editor);
-    }
-
-    createRestrictionComponent() {
-        console.log(this.restrictions)
     }
 
 }

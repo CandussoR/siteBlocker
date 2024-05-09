@@ -14,7 +14,7 @@ class SiteEditor extends HTMLElement {
         this.innerHTML = this.buildHTML()
 
         this.querySelector('#site-name').addEventListener('change', (e) => { this.temp.name = e.target.value })
-        this.querySelector('#group-select').addEventListener('change', (e) => this.modifyName(e))
+        this.querySelector('#group-select').addEventListener('change', (e) => this.modifyGroupName(e))
         this.querySelector('#add-group').addEventListener('click', () => this.renderCreateGroup())
         this.querySelector('form').addEventListener('submit', (event) => this.handleSubmit(event), false)
         this.querySelector('form button#cancel').addEventListener('click', () => this.handleCancel())
@@ -70,10 +70,8 @@ class SiteEditor extends HTMLElement {
         let div = document.createElement("div");
         div.insertAdjacentHTML( "afterbegin",
           `<input id="group-value" type="text"> <button id="create-new-group">Add</button> <button id="cancel-group-modification">Cancel</button>`);
-        div .querySelector("#create-new-group")
-          .addEventListener("click", (e) => this.createGroup(e));
-        div .querySelector("#cancel-group-modification")
-          .addEventListener("click", () => { div.replaceWith(groupSelectAdd); });
+        div.querySelector("#create-new-group").addEventListener("click", (e) => this.createGroup(e));
+        div.querySelector("#cancel-group-modification").addEventListener("click", () => { div.replaceWith(groupSelectAdd); });
 
         groupSelectAdd.replaceWith(div);
     }
@@ -88,9 +86,9 @@ class SiteEditor extends HTMLElement {
         this.buildHTML()
     }
 
-    modifyName(e) {
+    modifyGroupName(e) {
         e.preventDefault()
-        this.temp.name = e.target.value
+        this.temp.group = e.target.value
     }
 
     handleCancel() {
@@ -107,8 +105,6 @@ class SiteEditor extends HTMLElement {
                     "group" : this.temp.group || '',
                     "restrictions" : this.querySelector('restriction-editor').getModifiedData()
         }
-
-        console.log("site at submit", JSON.stringify(site))
 
         const data = await chrome.storage.local.get('sites')
         let siteIndex = data.sites.map(x => x.name).findIndex(x => x === this.name)

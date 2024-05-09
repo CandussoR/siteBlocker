@@ -1,11 +1,6 @@
-import SlotTimeRestriction from "../components/restrictions/restriction.js"
+import "../components/restrictions/restriction.js"
 import './components/siteComponent.js'
 import './components/siteEditor.js'
-
-if ('customElements' in window) { 
-    customElements.define('restriction-item', SlotTimeRestriction) 
-}
-
 
 listSites()
 
@@ -29,7 +24,7 @@ async function listSites() {
       : "";
     div.insertAdjacentHTML(
       "beforeend",
-      `<a-site name='${sites[i].name}' ${group} ${restrictions}><a-site/>`
+      `<a-site index='${i}' name='${sites[i].name}' ${group} ${restrictions}><a-site/>`
     );
   }
 
