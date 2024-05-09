@@ -1,5 +1,5 @@
 // I don't check onCreated since the url or pending are generally set through onUpdated.
-
+console.log("blocked script")
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     let restrictedSites = await getRestrictedSites();
     if (!restrictedSites) return ;
@@ -9,7 +9,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 
     if (url) {
         let host = new URL(url).host
-        if (isRestricted(host, restrictedSites)) {
+        if (await isRestricted(host, restrictedSites)) {
             chrome.tabs.update(tabId, {url : "redirected/redirected.html"}, () => {console.log(`redirected from ${host}`)})
         }
     }
@@ -24,7 +24,8 @@ async function getRestrictedSites() {
     return sites
 }
 
-function isRestricted(site, sites) {
+async function isRestricted(site, sites) {
+    console.log("checking sites restrictions")
     let sitesName = sites.map(x => x.name)
     if (!sitesName.includes(site)) { return false; }
 
@@ -32,28 +33,57 @@ function isRestricted(site, sites) {
     const currentTime = new Date().toLocaleTimeString('fr-FR')
 
     let siteIndex = sitesName.findIndex(x => x === site)
-    let restrictions = sites[siteIndex].restrictions
+    console.log("current site", sites[siteIndex])
+    let siteRestrictions = sites[siteIndex].restrictions
+    let siteGroup = sites[siteIndex].group
 
-    if (restrictions.timeSlot) { return checkSlots(restrictions.timeSlot, currentDay, currentTime) }
+    console.log("siteGroup", siteGroup)
+
+    if (siteGroup) {
+        console.log("this site belongs to a group")
+        
+        let { groups = [] } = await chrome.storage.local.get('groups')
+        let groupIndex = groups.findIndex(g => g.name === siteGroup)
+        let groupRestrictions = groups[groupIndex].restrictions
+        
+        if (groupRestrictions) {
+            let groupRestrictionsKeys = Object.keys(groupRestrictions)
+            let siteRestrictionsKeys = siteRestrictions ? Object.keys(siteRestrictions) : []
+                
+            let restricted = false;
+            if (groupRestrictionsKeys.includes("timeSlot")) {
+                console.log('checking group timeSlot')
+                  restricted = checkSlots( groupRestrictions.timeSlot, currentDay, currentTime);
+                if (
+                    siteRestrictionsKeys.includes("timeSlot") &&
+                    siteRestrictions.timeSlot !== groupRestrictions.timeSlot
+                ) {
+                console.log('group timeSlot and site timeSlot differ, checking the site too', )
+                restricted = checkSlots( siteRestrictions.timeSlot, currentDay, currentTime);
+              }
+            }
+            
+            return restricted
+            }
+        }
+        
+    if (siteRestrictions && siteRestrictions.timeSlot) { return checkSlots(siteRestrictions.timeSlot, currentDay, currentTime) }
 
     return false
 }
 
 function checkSlots(slots, currentDay, currentTime) {
     for (let i=0 ; i < slots.length ; i++) {
-
-        if (slots[i].days.includes(currentDay)) {
-            let spans = slots[i].time
-            for (let j = 0; j < spans.length; j++) {
-                if (j === (spans.length - 1) && currentTime > spans[j][0] && spans[j][1] === '00:00:00') {
-                    return true
-                }
-                else if (currentTime > spans[j][0] && currentTime < spans[j][1]) {
-                    console.log("yes it should be blocked")
-                    return true
-                }
-            }
+      if (slots[i].days.includes(currentDay)) {
+        let spans = slots[i].time;
+        for (let j = 0; j < spans.length; j++) {
+          if (
+            (j === spans.length - 1 && currentTime > spans[j][0] && spans[j][1] === "00:00") ||
+            (currentTime > spans[j][0] && currentTime < spans[j][1])) {
+            return true;
+          }
         }
+      }
     }
 
     return false;
