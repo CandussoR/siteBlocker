@@ -190,7 +190,10 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     span.replaceWith(form);
 
     let submit = document.querySelector("input#add-day-submit");
-    submit.addEventListener("click", (event) => this.addTempLi(ul, event, i));
+    submit.addEventListener("click", (event) => {
+      this.addTempLi(ul, event, i)
+      this.updateSelectDays( this.querySelector('#select-day'), ul);
+    })
   }
 
   addTempLi(ul, e, i) {
@@ -211,6 +214,23 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     ul.appendChild(listItem);
     
     removeButton.addEventListener('click', (e) => this.removeDay(e));
+  }
+
+  updateSelectDays(select, ul) {
+    const days = [ "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const presentDays = [...ul.getElementsByTagName("li")]
+      .filter((e) => e.firstChild.data !== undefined)
+      .map((e) => e.firstChild.data.trim());
+    const possibleDays = days.filter((x) => !presentDays.includes(x));
+
+    select.innerHTML = ''
+    select.insertAdjacentHTML("beforeend",
+                `${possibleDays
+                  .map( (d, i) =>
+                      `<option value=${d} ${
+                        i === 0 ? "selected" : ""
+                      }>${d}</option>`
+                  ) .join("")}`)
   }
 
   addTimeSlot(e) {
@@ -344,8 +364,6 @@ class SlotTimeRestrictionEditor extends HTMLElement {
     }
   }
 
-
-
   removeTimeSlot(e) {
     let id =  e.target.closest(`div[id$='-container']`).id.split('-').slice(0,2).join('-')
     let type = Object.keys(this.idMapping).find(x => this.idMapping[x] === id)
@@ -356,7 +374,6 @@ class SlotTimeRestrictionEditor extends HTMLElement {
   }
 
   removeDay(e) {
-    console.log("clicked", e)
     let id =  e.target.closest(`div[id$='-container']`).id.split('-').slice(0,2).join('-')
     let type = Object.keys(this.idMapping).find(x => this.idMapping[x] === id)
     let iUl = e.target.closest("ul").id.split("-").pop();

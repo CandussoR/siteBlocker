@@ -20,7 +20,7 @@ async function chargeDynamicHTML() {
     let currentSite = document.getElementById('host')
     let filtered = sites.filter(el => el.name === currentSite.innerHTML)
     if (filtered.length === 0) {
-        console.log("not filtered")
+        console.log("no corresponding site in storage")
         document.getElementById('add-to-group').addEventListener('click', chooseGroup)
         document.getElementById('add-to-sites').addEventListener('click', addSite)
         return;

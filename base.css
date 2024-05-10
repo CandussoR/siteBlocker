@@ -1,0 +1,60 @@
+:root {
+    font-size: clamp(calc(0.9rem + .3vw), 1rem, 1.5rem);
+  }
+
+::before,
+::after {
+box-sizing: border-box;
+}
+
+
+body {
+    padding: 2em;
+    display: flex;
+    flex-direction: column;
+}
+
+h1 {
+    margin : auto;
+}
+
+.card {
+    display : grid;
+    grid-template-columns: 1fr 1fr;
+}
+
+#time-slot-container,
+#total-time-container,
+#consecutive-time-container {
+    width: fit-content;
+    margin: 2em;
+    padding : 1em;
+    border: 1px black solid;
+}
+
+div[id^="card-"][id$="days"],
+div[id^="card-"][id$="times"]
+ {
+    border: 1px grey dashed;
+}
+
+a-site {
+    display: flex;
+    padding: 2em 1em;
+    width : max-content;
+    background-color: yellowgreen;
+    margin: 1em auto;
+}
+
+div #site {
+    position: relative
+}
+
+div#buttons {
+    position : absolute;
+    right: -1em;
+}
+
+span.material-symbols-outlined {
+    cursor : pointer;
+}

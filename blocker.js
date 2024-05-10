@@ -1,17 +1,20 @@
 // I don't check onCreated since the url or pending are generally set through onUpdated.
+
 console.log("blocked script")
+
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     let restrictedSites = await getRestrictedSites();
     if (!restrictedSites) return ;
-
+    
     let url = changeInfo.pendingUrl || changeInfo.url
-    if (url === "chrome://newtab/" || url === "redirected/redirected.html") return;
+    if (!url || url === "chrome://newtab/" || url === "redirected/redirected.html") return;
+    
+    let host = new URL(url).host
 
-    if (url) {
-        let host = new URL(url).host
-        if (await isRestricted(host, restrictedSites)) {
-            chrome.tabs.update(tabId, {url : "redirected/redirected.html"}, () => {console.log(`redirected from ${host}`)})
-        }
+    if (!restrictedSites.map(x => x.name).includes(host)) return ; 
+
+    if (await isRestricted(host, restrictedSites)) {
+        chrome.tabs.update(tabId, {url : "redirected/redirected.html"}, () => {console.log(`redirected from ${host}`)})
     }
   });
 
@@ -25,10 +28,10 @@ async function getRestrictedSites() {
 }
 
 async function isRestricted(site, sites) {
-    console.log("checking sites restrictions")
-    let sitesName = sites.map(x => x.name)
-    if (!sitesName.includes(site)) { return false; }
+    const sitesName = sites.map(x => x.name)
+    console.log(sitesName, "sitesName")
 
+    console.log("checking sites restrictions")
     const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
     const currentTime = new Date().toLocaleTimeString('fr-FR')
 
@@ -78,10 +81,10 @@ function checkSlots(slots, currentDay, currentTime) {
         let spans = slots[i].time;
         for (let j = 0; j < spans.length; j++) {
           if (
-            (j === spans.length - 1 && currentTime > spans[j][0] && spans[j][1] === "00:00") ||
-            (currentTime > spans[j][0] && currentTime < spans[j][1])) {
+            (j === spans.length - 1 && currentTime > spans[j][0] && spans[j][1] === "00:00")) {
             return true;
           }
+          if ((currentTime > spans[j][0] && currentTime < spans[j][1])) {return true;}
         }
       }
     }
