@@ -1,7 +1,4 @@
 // I don't check onCreated since the url or pending are generally set through onUpdated.
-
-console.log("blocked script")
-
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     let restrictedSites = await getRestrictedSites();
     if (!restrictedSites) return ;
@@ -14,9 +11,12 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (!restrictedSites.map(x => x.name).includes(host)) return ; 
 
     if (await isRestricted(host, restrictedSites)) {
-        chrome.tabs.update(tabId, {url : "redirected/redirected.html"}, () => {console.log(`redirected from ${host}`)})
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message.ready) { sendResponse({url : url, host : host}) }
+      })
+      chrome.tabs.update(tabId, {url : "redirected/redirected.html"})
     }
-  });
+});
 
 async function getRestrictedSites() {
     let {sites = []} = await chrome.storage.local.get('sites')
@@ -57,7 +57,7 @@ async function isRestricted(site, sites) {
             if (groupRestrictionsKeys.includes("timeSlot")) {
                 console.log('checking group timeSlot')
                   restricted = checkSlots( groupRestrictions.timeSlot, currentDay, currentTime);
-                if (
+                if (!restricted &&
                     siteRestrictionsKeys.includes("timeSlot") &&
                     siteRestrictions.timeSlot !== groupRestrictions.timeSlot
                 ) {
