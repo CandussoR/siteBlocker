@@ -1,13 +1,21 @@
+chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (area === 'local') {
+        await chrome.alarms.clearAll()
+        createAlarms()
+    }
+})
 
-    console.log("trying to create alarms")
-if (!alarmsAreSet()) {
-    console.log("no alarms are set")
-    createAlarms()
+handleAlarms()
+
+async function handleAlarms() {
+    if (! await alarmsAreSet()) {
+        createAlarms()
+    }
 }
 
 async function alarmsAreSet() {
     let { alarms = [] } = await chrome.alarms.getAll()
-    return alarms.length !== 0
+    return alarms.length !== 0;
 }
 
 async function createAlarms() {
@@ -27,12 +35,8 @@ async function createAlarms() {
         for (let i=0 ; i<f.restrictions.timeSlot.length ; i++) {
             let {days, time} = f.restrictions.timeSlot[i]
 
-            console.log("is there today in days ?")
             if (!days.includes(currentDay)) { continue; }
 
-            console.log("yep there were, let's check the time")
-
-            console.log('times', time)
             for (let j = 0 ; j < time.length ; j++) {
                 let index = -1
 
@@ -41,19 +45,19 @@ async function createAlarms() {
 
                 if (index === -1) { continue; }
 
-                console.log("index", index)
-
                 let [hours, minutes] = time[j][index].split(':')
+
                 let futureDate = new Date()
                 futureDate.setHours(hours)
                 futureDate.setMinutes(minutes)
                 futureDate.setSeconds(0)
 
-                let delay = futureDate - new Date()
+                let delay = (futureDate - Date.now()) / 1000 / 60
+
                 if (index === 1) {
-                    chrome.alarms.create(`${f.name}-restriction-end`, {when : futureDate})
+                    chrome.alarms.create(`${f.name}-restriction-end`, {delayInMinutes : delay})
                 } else if (index === 0) {
-                    chrome.alarms.create(`${f.name}-restriction-begin`, {when : futureDate})
+                    chrome.alarms.create(`${f.name}-restriction-begin`, {delayInMinutes : delay})
                 }
             }
         }
@@ -62,25 +66,23 @@ async function createAlarms() {
 
 // Fires when I alarms has been triggered
 chrome.alarms.onAlarm.addListener(async (alarm) => {
-    console.log(alarm)
-    let { tabs = [] } = await chrome.tabs.query({})
+    let tabs = await chrome.tabs.query({})
     let [n, r, type] = alarm.name.split('-')
     let isGroup = (n.indexOf('.') === -1)
 
     if (type === 'end') {
-        console.log('end of the restriction')
+        chrome.runtime.sendMessage({restriction : "ended"})
+        chrome.alarms.clear(alarm.name)
         return;
     }
 
     let targets = []
     if (isGroup) {
         let { sites = [] } = await chrome.storage.local.get('sites')
-        targets = sites.filter(x => x.group === n)
+        targets = sites.filter(x => x.group === n).map(x => x.name)
     } else {
         targets.push(n)
     }
-
-    console.log('restriction begin, redirecting every tab')
 
     for (let i = 0; i < tabs.length ; i++) {
         let host = new URL(tabs[i].url).host
@@ -90,9 +92,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
         }
         
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => { 
-            if (message.ready) { sendResponse({url : url, host : host}) } 
+            if (message.ready) { sendResponse({url : tabs[i].url, host : host}) } 
         })
 
         chrome.tabs.update(tabs[i].id, {url : "redirected/redirected.html"})
     }
+
+    chrome.alarms.clear(alarm.name)
 })
