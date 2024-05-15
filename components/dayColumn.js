@@ -3,13 +3,16 @@ class DayColumn extends HTMLElement {
         super()
     }
 
-    connectedCallback() {
-        this.tempDays = this.days
-
+    connectedCallback(refresh = false) {
+        if (!refresh) this.tempDays = this.days
+    
         this.buildHTML()
 
         this.querySelector("[id^='add-day-']").addEventListener('click', (e) => { this.addDayInput(e) })
-        this.querySelector("[id^='remove-day-']").addEventListener('click', (e) => { this.removeDay(e) })
+
+        let removeButtons = this.querySelectorAll("[id^='remove-day-']")
+        if (removeButtons.length === 0) return;
+        removeButtons.forEach((button) => button.addEventListener('click', (e) => { this.removeDay(e) }))
     }
 
     get index() { return this.getAttribute('index') }
@@ -45,31 +48,30 @@ class DayColumn extends HTMLElement {
         const div = this.buildSelect(possibleDays)
         span.replaceWith(div);
 
-        let submit = this.querySelector("button#add-day-submit");
-        submit.addEventListener("click", (event) => {
+        this.querySelector('#select-day').addEventListener("change", (event) => {
             event.preventDefault()
+            if (e.target.value === '') return;
             this.addTempLi(this.restrictionType, ul, i)
-          this.updateSelectDays( this.querySelector('#select-day'), ul);
+            this.updateSelectDays( this.querySelector('#select-day'), ul);
         })
 
+        this.querySelector(`#done-select-${this.index}`).addEventListener('click', (e) => { this.connectedCallback(true) })
+        this.querySelector(`#cancel-select-${this.index}`).addEventListener('click', (e) => { this.connectedCallback() })
     }
-
-    cancelEditor() {}
-    editorDone() {}
 
     buildSelect(possibleDays) {
         const div = document.createElement("div");
         div.innerHTML = ` 
                 <select id="select-day">
+                    <option value='' selected>--Choose your day--</option>
                     ${possibleDays
                       .map( (d, i) =>
-                          `<option value=${d} ${
-                            i === 0 ? "selected" : ""
-                          }>${d}</option>`
+                          `<option value=${d}>${d}</option>`
                       ) .join("")}
                 </select>
                 <div id="day-column-editor__cta">
-                    <button id="add-day-submit">Add</button>
+                    <button id="done-select-${this.index}">Done</button>
+                    <button id="cancel-select-${this.index}">Cancel</button>
                 </div> `;
         return div
     }
@@ -84,24 +86,20 @@ class DayColumn extends HTMLElement {
     }
 
     updateSelectDays(select, ul) {
-        const days = [ "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-        const presentDays = [...ul.getElementsByTagName("li")]
-            .filter((e) => e.firstChild.data !== undefined)
-            .map((e) => e.firstChild.data.trim());
-        const possibleDays = days.filter((x) => !presentDays.includes(x));
+        let possibleDays = this.calculatePossibleDaysFrom(ul)
     
         select.innerHTML = ''
         select.insertAdjacentHTML("beforeend",
-                    `${possibleDays
+                    `<option value='' selected>--Choose your day--</option>
+                    ${possibleDays
                         .map( (d, i) =>
-                            `<option value=${d} ${
-                            i === 0 ? "selected" : ""
-                            }>${d}</option>`
+                            `<option value=${d}>${d}</option>`
                         ) .join("")}`)
     }
 
     addTempLi(type, ul, i) {
-        let selectedDay = document.getElementById("select-day").options[select.selectedIndex].value;
+        let select = document.getElementById("select-day")
+        let selectedDay = select.options[select.selectedIndex].value;
         this.tempDays.push(selectedDay);
         this.dispatchEvent(new CustomEvent('daysUpdate', { detail : {restrictionType : type, ul: ul, i: i, days : this.tempDays}, bubbles : true }))
     
