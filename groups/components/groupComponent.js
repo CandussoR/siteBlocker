@@ -7,12 +7,8 @@ class GroupComponent extends HTMLElement {
     }
 
     async connectedCallback() {
-        console.log("connected a group comp")
-        console.log("restrictions in groupComponent", this.restrictions)
         let sites = await chrome.storage.local.get('sites')
-        console.log("sites", sites)
         this.sites = sites.sites.filter(x => x.group === this.name)
-        console.log("this sites", this.sites)
         this.innerHTML = null
         this.buildHTML()
         this.querySelector('#edit-button').addEventListener('click', () => this.replaceComponent())
@@ -32,7 +28,6 @@ class GroupComponent extends HTMLElement {
     set restrictions(r) { this.setAttribute('restrictions', r) }
 
     buildHTML() {
-        console.log(this.sites)
         this.innerHTML = `
             <div id='${this.name}'>
                 <div id='${this.name}-buttons'>
@@ -48,7 +43,6 @@ class GroupComponent extends HTMLElement {
                     </div>
                     `
         let div = this.querySelector(`#${this.name}`)
-        console.log(this.restrictions? "yep" : "nope")
         if (this.restrictions) {
             div.insertAdjacentHTML("beforeend", `<restriction-item item-type="group" restrictions='${JSON.stringify(this.restrictions)}' />`)
         }
@@ -58,7 +52,7 @@ class GroupComponent extends HTMLElement {
         let editor = document.createElement('group-editor')
         editor.setAttribute('index', this.index)
         editor.setAttribute('name', this.name)
-        editor.setAttribute('sites', JSON.stringify(this.sites))
+        editor.setAttribute('sites', JSON.stringify(this.sites.map(x => x.name)))
         if (this.restrictions) editor.setAttribute("restrictions", JSON.stringify(this.restrictions));
         this.replaceWith(editor)
     }

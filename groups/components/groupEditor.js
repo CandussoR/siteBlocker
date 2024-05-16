@@ -58,7 +58,7 @@ class GroupEditor extends HTMLElement {
       } else {
         let list =`${this.sites.map((s,i) => `
                   <li id="site-${i}">
-                    ${s.name} 
+                    ${s} 
                     <span id="remove-site-${i}" class='material-symbols-outlined'>remove</span>
                   </li>`).join("")}`
         this.querySelector('#sites-in-group').insertAdjacentHTML("beforeend", list)
