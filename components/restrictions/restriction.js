@@ -44,17 +44,13 @@ class SlotTimeRestriction extends HTMLElement {
         if (keys.includes('timeSlot')) {
             html += `
         <div id='time-slot-container' class="time-slot-container">
-
             <h3>Time Slots</h3>
                 ${this.restrictions.timeSlot.map((element, index) => `
                     <span id="add-slot">
-
                     <ul id="slot-${index}">
                         <li id="days-${index}">
-                            <span id="remove-slot-${index}" class='material-symbols-outlined'>remove</span>
                             <div>
                                 On ${element["days"].join(', ')} :
-
                                 <ul id="time-list-${index}">
                                     ${element["time"].map((t, i) => `
                                         <li id="time-slot-${i}">from ${t[0]} to ${t[1]}</li>
@@ -70,10 +66,13 @@ class SlotTimeRestriction extends HTMLElement {
 
         if (keys.includes('totalTime')) {
             html += `<div id="total-time-container">
+                        <h3>Total Time</h3>
+                        <ul id="total-time-list">
                       ${this.restrictions.totalTime
                           .map((el, index) =>
-                            `<p id="total-time-${index}-days">On ${el.days.join('')} for ${el.totalTime} minutes.</p>`
+                            `<li id="total-time-${index}">${el.totalTime / 60} minutes on ${el.days.join('')}.</li>`
                       ).join('')}
+                        </ul>
                      </div>`
           }
     
@@ -82,7 +81,7 @@ class SlotTimeRestriction extends HTMLElement {
             ${this.restrictions.consecutiveTime
               .map(
                 (el, index) =>
-                  `<p id="total-time-${index}-days">On ${el.days.join("")}, ${ el.consecutiveTime } consecutive minutes max with ${ el.pause } minutes pause between.</p>`)
+                  `<p id="total-time-${index}-days">On ${el.days.join("")}, ${ el.consecutiveTime / 60} consecutive minutes max with ${ el.pause / 60} minutes pause between.</p>`)
               .join("")}
            </div>`;
           }

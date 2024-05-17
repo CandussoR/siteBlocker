@@ -16,9 +16,14 @@ class RestrictionEditor extends HTMLElement {
 
     this.querySelector("#select-restriction").addEventListener('change', (e) => this.addNewRestriction(e))
 
+    document.addEventListener('deleteCard', (e) => {
+      if (this.tempRestrictions[e.detail.restrictionType].length === 1) delete this.tempRestrictions[e.detail.restrictionType]
+      else this.tempRestrictions[e.detail.restrictionType].splice(e.detail.i, 1)
+    })
+
     document.addEventListener('daysUpdate', (e) => { this.tempRestrictions[e.detail.restrictionType][e.detail.i].days = e.detail.days })
     document.addEventListener('slotUpdate', (e) => { this.tempRestrictions.timeSlot[e.detail.i].time = e.detail.time })
-    document.addEventListener('timeInputChange', (e) => {console.log(e)})
+    document.addEventListener('timeInputChange', (e) => { this.tempRestrictions[e.detail.restrictionType][e.detail.i][e.detail.key] = e.detail.time })
   }
 
   disconnectedCallback() {
@@ -65,18 +70,19 @@ class RestrictionEditor extends HTMLElement {
           <h3>Time Slots</h3>
         ${this.tempRestrictions.timeSlot
           .map(
-            (element, index) => `<time-slot-restriction-editor index='${index}' days='${JSON.stringify(element.days)}' time='${JSON.stringify(element.time)}'/>`)
+            (element, index) => `<time-slot-restriction-editor index='${index}' days='${JSON.stringify(element.days)}' time='${JSON.stringify(element.time)}'></time-slot-restriction-editor>`)
             .join("")
         }
           </div>
         `
       }
 
-      if (keys.includes("totalTime")) {
-        html += `<div id="total-time-container">
+      if (keys.includes('totalTime')) {
+        console.log("yep I found a totalTime constraint")
+        html += `<div id='total-time-container'>
           <h3>Total Time</h3>
           ${this.tempRestrictions.totalTime
-            .map((element, index) => `<total-time-restriction-editor index='${index}' days='${element.days}' totalTime='${element.totalTime}'/>`)
+            .map((element, index) => `<total-time-restriction-editor index='${index}' days='${JSON.stringify(element.days)}' totalTime='${JSON.stringify(element.totalTime)}'></total-time-restriction-editor>`)
             .join('')
           }
           </div>`
@@ -152,6 +158,7 @@ class RestrictionEditor extends HTMLElement {
         case ('totalTime') :
           let totalTimeRestrictionEditor = document.createElement('total-time-restriction-editor')
           totalTimeRestrictionEditor.index = index
+          totalTimeRestrictionEditor.totalTime = 0
           baseElement.insertAdjacentElement("beforeend", totalTimeRestrictionEditor)
           totalTimeRestrictionEditor.newCard(index)
             break;

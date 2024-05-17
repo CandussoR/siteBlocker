@@ -7,7 +7,7 @@ class TimeSlotRestrictionEditor extends HTMLElement {
 
     connectedCallback(refresh=false) {
         if (!refresh) {
-            this.temp = {"days" : this.days, "time" : this.time}
+            this.temp = {"days" : this.days, "time" : this.time || []}
             this.innerHTML = this.buildHTML()
         }
 
@@ -102,31 +102,7 @@ class TimeSlotRestrictionEditor extends HTMLElement {
     }
 
     async handleDelete() {
-        let editor = this.closest('group-editor') || this.closest('site-editor') ;
-        let confirmed = confirm("Do you really want to delete this card ?") ;
-        if (!confirmed) return ;
-
-        let items;
-        if (editor.tagName === 'GROUP-EDITOR') {
-            let { groups = [] } = await chrome.storage.local.get('groups')
-            items = groups
-        } else {
-            let {sites = [] } = await chrome.storage.local.get('sites')
-            items = sites
-        }
-
-        if (items[editor.index].restrictions.totalTime.length === 1) {
-            delete items[editor.index].restrictions.totalTime
-        } else {
-            items[editor.index].restrictions.totalTime.splice(this.index, 1)
-        }
-
-        if (editor.tagName === 'GROUP-EDITOR') {
-            await chrome.storage.local.set({groups : items})
-        } else {
-            await chrome.storage.local.set({sites : items})
-        }
-
+        this.dispatchEvent(new CustomEvent('deleteCard', {detail : {restrictionType: 'timeSlot', i : this.index}, bubbles : true}))
         this.remove()
     }
 }
