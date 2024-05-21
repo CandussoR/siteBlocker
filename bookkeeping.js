@@ -84,9 +84,10 @@ export async function bookkeeping(flag, tabId=undefined, host=undefined) {
         el.focused = false
       }
     }
-    console.log("ok, and on this one you are focused now...")
+    console.log("ok, and on this one you are focused now...", host, todayRecord[host])
     todayRecord[host].focused = true
     if (!todayRecord[host].initDate) todayRecord[host].initDate = Date.now()
+    if (!todayRecord[host].tabId) todayRecord[host].tabId = tabId
   }
 
   console.log("Now this is today's record after its modification, is it alright ?", todayRecord)
