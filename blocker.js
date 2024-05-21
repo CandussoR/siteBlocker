@@ -236,17 +236,17 @@ async function bookkeeping(flag, tabId=undefined, host=undefined) {
 
   else if (flag === 'audible-start') {
     console.log("oh! you started to consume some media!")
-    todayRecord[host][audible] = true
+    todayRecord[host].audible = true
     if (!todayRecord[host].initDate) todayRecord[host].initDate = Date.now()
   }
 
   else if (flag === 'audible-end') {
     console.log("You stopped consuming some media.")
-    todayRecord[host][audible] = false
+    todayRecord[host].audible = false
     if (!todayRecord[host].focused) {
       console.log("and the tab is not focused, so it doesn't count anymore")
       todayRecord[host].totalTime += Math.round( (Date.now() - todayRecord[host].initDate) / 1000 )
-      todayRecord[host].dateInit = null
+      todayRecord[host].initDate = null
     }
     console.log("I deactivated audible, here is the new record", todayRecord[host])
   }
