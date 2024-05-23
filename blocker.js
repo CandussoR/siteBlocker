@@ -1,5 +1,6 @@
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   let tab = await chrome.tabs.get(activeInfo.tabId)
+  console.log("changes on this tab")
   if (!tab.url) return;
   let restrictedSites = await getRestrictedSites();
   let host = new URL(tab.url).host
@@ -21,44 +22,56 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     if (!url || url === "chrome://newtab/" || url === "redirected/redirected.html") return;
     let host = new URL(url).host
     if (!restrictedSites.map(x => x.name).includes(host)) return ; 
-    bookkeeping('open', tab.tabId, host)
+    bookkeeping('change-focus', tab.tabId, host)
   }
 })
 
 // I don't check onCreated since the url or pending are generally set through onUpdated.
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  console.log("Tabs have been updated, I've received this changeInfo object :", changeInfo, changeInfo.audible, changeInfo.audible === true)
+    let changeUrl = changeInfo.pendingUrl || changeInfo.url;
+    let changeAudible = Object.keys(changeInfo).includes('audible')
+    if (!changeUrl && !changeAudible) { 
+      console.log("useless event", changeInfo) 
+      return ; }
+    if ((changeUrl === "chrome://newtab/") || (changeUrl === "redirected/redirected.html")) {
+      console.log("don't care about those url")
+      return ; 
+    }
 
-    let flag = 'open'
+    console.log("update", tabId, changeInfo, tab, new Date())
+    let flag = 'open';
     let restrictedSites = await getRestrictedSites();
     if (!restrictedSites) return ;
     
-    let url = changeInfo.pendingUrl || changeInfo.url
-    if (!url || url === "chrome://newtab/" || url === "redirected/redirected.html") return;
+    console.log("found sites");
+    let url = changeUrl || tab.url;
+    if (!url) return;
     
-    let host = new URL(url).host
-
+    console.log("we passed the new tab")
+    let host = new URL(url).host;
+    console.log("got url", host);
     if (!restrictedSites.map(x => x.name).includes(host)) return ;
 
     if (await isRestricted(host, restrictedSites)) {
+      bookkeeping('close', tabId, host);
       chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (message.ready) { sendResponse({url : url, host : host}) }
-      })
-      chrome.tabs.update(tabId, {url : "redirected/redirected.html"})
+      });
+      chrome.tabs.update(tabId, {url : "redirected/redirected.html"});
+      return;
     }
 
-    console.log('TRYING TO SEE IF INFOS OF CHANGEINFO FIND AUDIBLE CHANGE')
     if (changeInfo.audible === true) {
-      console.log(changeInfo, "seems you began to play sth", tab.url)
-      flag = 'audible-start'
+      console.log(changeInfo, "seems you began to play sth", tab.url);
+      flag = 'audible-start';
     }
     if (changeInfo.audible === false) {
-      console.log(changeInfo, "seems you stop playing something", tab.url)
-      flag = 'audible-end'
+      console.log(changeInfo, "seems you stop playing something", tab.url);
+      flag = 'audible-end';
     }
 
-    console.log("Okay, damn this never end, let me bookkeep that, I want a rise !")
-    bookkeeping(flag, tabId, host)
+    console.log("Okay, damn this never end, let me bookkeep that", new Date());
+    bookkeeping(flag, tabId, host);
 });
 
 async function getRestrictedSites() {
@@ -206,49 +219,88 @@ chrome.tabs.onRemoved.addListener((tabId, removeInfo) => {
  })
 
 async function bookkeeping(flag, tabId=undefined, host=undefined) {
+  console.log("In bookkeeping I have received", flag, tabId, host, Date.now())
   let date = new Date().toISOString().split('T')[0] ;
   let { records = [] } = await chrome.storage.local.get('records')
   let todayRecord = records[date]
   let rKeys = Object.keys(todayRecord)
+  console.log(`Before we begin anything, here's today's records before treating the event ${flag}:`, todayRecord)
+  
+  // Managing focused right away because I don't seem to succeed in managing it case by case.
+  if (!['no-focus', 'close'].includes(flag)) {
+    console.log("I'm trying to handle the focused property first")
+    let [focused] = await chrome.tabs.query({active: true});
+    let focusedUrl = new URL(focused.url).host
+    let rKeysFiltered = rKeys.filter(x => x !== focusedUrl)
+    console.log("Seems like we should focus this part of the record :", todayRecord[focusedUrl])
+    console.log("I'll check if selectedTab is already focused")
+    if (!todayRecord[focusedUrl].focused) {
+      console.log("It's not, so let's mark it focused")
+      todayRecord[focusedUrl].focused = true
+      console.log("I'll set initDate too")
+      if (!todayRecord[focusedUrl].initDate) todayRecord[focusedUrl].initDate = Date.now()
+      console.log("Now let's mark the other sites not focused. I'll use this list : ", rKeysFiltered)
+      for (let k of rKeysFiltered) {
+        todayRecord[k].focused = false
+      }
+      console.log("Now today record looks like this : ", todayRecord)
+    }
+  }
 
   if (flag === 'close') {
-    console.log("Oh so you're leaving ?")
-    let sites = Object.keys(todayRecord)
-    for (let i = 0; i < sites.length ; i++) {
-      if (todayRecord[sites[i]].tabId !== tabId) {
+
+    console.log("Oh so you're leaving ?")    
+
+    for (let i = 0; i < rKeys.length ; i++) {
+      if (!todayRecord[rKeys[i]].tabId || !todayRecord[rKeys[i]].tabId.includes(tabId)) {
         continue;
-      } else {
-        let site = todayRecord[sites[i]]
-        console.log("The time should be :", Math.round( (Date.now() - site.initDate) / 1000 ))
+      }
+      
+      let site = todayRecord[rKeys[i]]
+      let tabIndex = site.tabId.findIndex(x => x === tabId)
+      if (site.tabId.length > 1 && tabIndex !== -1) {
+        console.log("you have multiple tabs open for this website", site.tabId)
+        site.tabId.splice(tabIndex, 1)
+        break;
+      } 
+
+      console.log("The time should be :", Math.round( (Date.now() - site.initDate) / 1000 ))
+      if (site.initDate) {
         site.totalTime += Math.round( (Date.now() - site.initDate) / 1000 )
         site.initDate = null
-        site.tabId = null
-        break;
       }
+
+      site.tabId = null
+      site.audible = false
+      site.focused = false
+      break;
     }
   }
 
   else if (flag === 'open') {
-    let site = todayRecord[host]
-    site.initDate = Date.now()
-    site.tabId = tabId
+    let site = todayRecord[host];
+    console.log("this site has been opened", site)
+    if (!site.initDate) site.initDate = Date.now();
+
+    console.log("checking site tab in open", new Date())
+    site.tabId && !site.tabId.includes(tabId) ? site.tabId.push(tabId) : site.tabId = [ tabId ];
   }
 
   else if (flag === 'audible-start') {
-    console.log("oh! you started to consume some media!")
-    todayRecord[host].audible = true
-    if (!todayRecord[host].initDate) todayRecord[host].initDate = Date.now()
+    console.log("oh! you started to consume some media!");
+    todayRecord[host].audible = true;
+    if (!todayRecord[host].initDate) todayRecord[host].initDate = Date.now();
   }
 
   else if (flag === 'audible-end') {
     console.log("You stopped consuming some media.")
     todayRecord[host].audible = false
-    if (!todayRecord[host].focused) {
+    console.log("focused and tabId", todayRecord[host].focused, todayRecord[host].tabId)
+    if (!todayRecord[host].focused && todayRecord[host].tabId.length === 1) {
       console.log("and the tab is not focused, so it doesn't count anymore")
       todayRecord[host].totalTime += Math.round( (Date.now() - todayRecord[host].initDate) / 1000 )
       todayRecord[host].initDate = null
     }
-    console.log("I deactivated audible, here is the new record", todayRecord[host])
   }
 
   else if (flag === 'no-focus') {
@@ -270,28 +322,34 @@ async function bookkeeping(flag, tabId=undefined, host=undefined) {
   }
 
   else if (flag === 'change-focus') {
-    console.log('oh, you changed the focus of a tab')
     // infos : tabId and host
+    if (todayRecord[host].focused === false) {
+      console.log("you changed the focus and the domain")
+      todayRecord = bookkeepChangeFocus(rKeys, todayRecord, host)
+    }
+  }
+
+  console.log("Now this is today's record after its modification, is it alright ?", todayRecord)
+  await chrome.storage.local.set({records : records})
+}
+
+function bookkeepChangeFocus(rKeys, todayRecord, host) {
     for (let i=0; i<rKeys.length ; i++) {
-      console.log("I'll be going through the sites present in records to note that.")
+      console.log("I'll be going through the sites present in records to note that and unfocused the precedent site.")
       let el = todayRecord[rKeys[i]]
 
       if (el.focused && el.audible) {
         console.log("but you're consuming some media on this one, so I won't stop counting time.")
-        el.focused = false
-      } else if (el.focused) {
+        // el.focused = false
+      } else if (el.focused && !el.tabId.includes(tabId)) {
         el.totalTime += Math.round( (Date.now() - el.initDate) / 1000 )
         el.initDate = null
-        el.focused = false
+        // el.focused = false
       }
     }
-    console.log("ok, and on this one you are focused now...")
-    todayRecord[host].focused = true
-    if (!todayRecord[host].initDate) todayRecord[host].initDate = Date.now()
-  }
-
-  console.log("Now this is today's record after its modification, is it alright ?", todayRecord)
-  console.log("And those are the records, has it been modified the right way ?", records)
-  console.log("I send it anyway, good luck")
-  await chrome.storage.local.set({records : records})
+    // console.log("ok, and on this one you are focused now...")
+    // todayRecord[host].focused = true
+    // if (!todayRecord[host].initDate) todayRecord[host].initDate = Date.now()
+    
+    return todayRecord
 }
