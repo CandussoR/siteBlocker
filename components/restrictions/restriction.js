@@ -46,7 +46,6 @@ class SlotTimeRestriction extends HTMLElement {
         <div id='time-slot-container' class="time-slot-container">
             <h3>Time Slots</h3>
                 ${this.restrictions.timeSlot.map((element, index) => `
-                    <span id="add-slot">
                     <ul id="slot-${index}">
                         <li id="days-${index}">
                             <div>
@@ -78,10 +77,21 @@ class SlotTimeRestriction extends HTMLElement {
     
           if (keys.includes('consecutiveTime')) {
             html += `<div id="consecutive-time-container">
+            <h3>Consecutive Time</h3>
             ${this.restrictions.consecutiveTime
               .map(
                 (el, index) =>
-                  `<p id="total-time-${index}-days">On ${el.days.join("")}, ${ el.consecutiveTime / 60} consecutive minutes max with ${ el.pause / 60} minutes pause between.</p>`)
+                  `<ul id='consecutive-time-${index}-days'>
+                    <li>
+                      <div>
+                        On ${el.days.join(", ")} :
+                        <ul id='time-pause-${index}'>
+                            <li>${ el.consecutiveTime / 60} consecutive minutes straight max, </li> 
+                            <li>${ el.pause / 60} minutes pause between.</li>
+                        </ul>
+                      </div>
+                    </li>
+                </ul>`)
               .join("")}
            </div>`;
           }

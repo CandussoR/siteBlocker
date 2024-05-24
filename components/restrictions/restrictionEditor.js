@@ -1,5 +1,6 @@
 import './totalTimeRestriction.js'
 import './timeSlotRestrictionEditor.js'
+import './consecutiveTimeRestrictionEditor.js'
 
 class RestrictionEditor extends HTMLElement {
   constructor() {
@@ -95,12 +96,8 @@ class RestrictionEditor extends HTMLElement {
           <h3>Consecutive Time</h3>
         ${this.tempRestrictions.consecutiveTime
           .map(
-            (el, index) =>
-              `<p id="total-time-${index}-days">On ${el.days.join("")}, ${
-                el.consecutiveTime
-              } consecutive minutes max with ${
-                el.pause
-              } minutes pause between.</p>`
+            (element, index) =>
+              `<consecutive-time-restriction-editor index='${index}' days='${JSON.stringify(element.days)}' consecutiveTime='${JSON.stringify(element.consecutiveTime)}' pause='${element.pause}'`
           )
           .join("")}
        </div>`;
@@ -115,7 +112,6 @@ class RestrictionEditor extends HTMLElement {
     let type = event.target.value
     let idType = this.idMapping[type]
     let titleType = this.titleMapping[type]
-
     if (keys.length === 0) {
 
       this.tempRestrictions = {}
@@ -163,24 +159,11 @@ class RestrictionEditor extends HTMLElement {
           totalTimeRestrictionEditor.newCard(index)
             break;
         case ('consecutiveTime'):
-          html += `<div id="consecutive-time-card-${index}" class="total-time-card">
-                    <div id="card-${index}-days" class="day-column">
-                        <h4>For days</h4>
-                        <ul id="day-list-${index}"></ul>
-                        <span id="add-day-${index}" class="add-day material-symbols-outlined"> add </span>
-                    </div>
-                    <div id="card-${index}-times" class="time-column">
-                        <h4>Max time before the pause</h4>
-                        <label for="consecutive-time-${index}">Max time straight :</label>
-                        <input id="consecutive-time-${index}" name="consecutive-time-${index}" type="number">
-                        <label for="pause-${index}">Pause :</label>
-                        <input id="pause-${index}" name="pause-${index}" type="number">
-                    </div>
-                </div>`
-            baseElement.insertAdjacentHTML("beforeend", html)
-            this.querySelector(`#add-day-${index}`).addEventListener("click", (e) => this.addDayInput(e))
-            this.querySelector(`#consecutive-time-${index}`).addEventListener("change", (e) => this.setTimeInMinutes(e, 'consecutiveTime', index, 'max'))
-            this.querySelector(`#pause-${index}`).addEventListener("change", (e) => this.setTimeInMinutes(e, 'consecutiveTime', index, 'pause'))
+          let consecutiveTimeRestrictionEditor = document.createElement('consecutive-time-restriction-editor')
+          consecutiveTimeRestrictionEditor.index = index
+          consecutiveTimeRestrictionEditor.consecutiveTime = 0
+          consecutiveTimeRestrictionEditor.pause = 0
+          baseElement.insertAdjacentElement("beforeend", consecutiveTimeRestrictionEditor)
             break;
         default:
             console.error("Inexisting type", type)
