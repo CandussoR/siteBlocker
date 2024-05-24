@@ -1,4 +1,16 @@
 chrome.storage.onChanged.addListener(async (changes, area) => {
+    if (changes.sites.newValue.length > changes.sites.oldValue.length) {
+        let date = new Date().toISOString().split('T')[0] ;
+        let { records = [] } = await chrome.storage.local.get('records')
+        let todayRecord = records[date]
+        for (let site of changes.sites.newValue) {
+            if (!(site.name in todayRecord)) {
+                todayRecord[site.name] = {initDate : null, totalTime : 0, audible : false, tabId : null, focused : false };
+            }
+        }
+        await chrome.storage.local.set({records : records})
+    }
+
     if (area === 'local') {
         await chrome.alarms.clearAll()
         createAlarms()
