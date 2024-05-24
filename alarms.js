@@ -1,5 +1,5 @@
 chrome.storage.onChanged.addListener(async (changes, area) => {
-    if (changes.sites.newValue.length > changes.sites.oldValue.length) {
+    if (changes.sites && (changes.sites.newValue.length > changes.sites.oldValue.length)) {
         let date = new Date().toISOString().split('T')[0] ;
         let { records = [] } = await chrome.storage.local.get('records')
         let todayRecord = records[date]
