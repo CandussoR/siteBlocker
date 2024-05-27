@@ -42,12 +42,13 @@ function getTodayRecord(records) {
     return records[date]
 }
 
-async function handleOpen(siteRecord, tabId, host) {
+export async function handleOpen(siteRecord, tabId, host) {
   if (siteRecord.tabId && !siteRecord.tabId.includes(tabId)) siteRecord.tabId.push(tabId)
   else if (!siteRecord.tabId) siteRecord.tabId = [tabId]
 
-  console.assert(siteRecord.tabId, `Error, no tabId : ${siteRecord}`)
   let focused = await chrome.tabs.query({active: true});
+  console.log(focused)
+  console.log(focused, focused[0])
   if (focused[0] && new URL(focused[0].url).host === host) {
     siteRecord.focused = true 
     siteRecord.initDate = Date.now()
@@ -56,26 +57,28 @@ async function handleOpen(siteRecord, tabId, host) {
   return siteRecord
 }
 
-function handleClose(todayRecord, tabId) {
+export async function handleClose(todayRecord, tabId) {
 
   for (let site of Object.keys(todayRecord)) {
     if (!todayRecord[site].tabId || !todayRecord[site].tabId.includes(tabId)) { continue; } 
 
-    console.assert(todayRecord[site].tabId, `Error, no tabId : ${todayRecord[site]}`)
-
     if (todayRecord[site].tabId.length > 1) {
+      if (todayRecord[site].audible && await checkToggleAudible(site)) {todayRecord[site].audible = false}
       let tabIndex = todayRecord[site].tabId.findIndex(x => x === tabId)
       todayRecord[site].tabId.splice(tabIndex, 1)
     } else {
       todayRecord[site].tabId = null
       todayRecord[site].focused = false;
       todayRecord[site].audible = false;
+    } 
+
+    if (todayRecord[site].initDate && todayRecord[site].audible) {
+      return todayRecord;
     }
-    
-    if (todayRecord[site].initDate) {
-      todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
-      todayRecord[site].initDate = null;
-    }
+
+    console.log(todayRecord[site].initDate && !todayRecord[site].audible)
+    todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
+    todayRecord[site].initDate = null;
     console.assert(todayRecord[site].initDate === null)
     console.log("after close", todayRecord)
   }
@@ -84,7 +87,7 @@ function handleClose(todayRecord, tabId) {
 }
 
 
-function handleAudibleStart(siteRecord) {
+export function handleAudibleStart(siteRecord) {
   siteRecord.audible = true
   if (!siteRecord.initDate) siteRecord.initDate = Date.now()
   console.warn("siteRecord after handleAudibleStart", siteRecord)
@@ -92,7 +95,7 @@ function handleAudibleStart(siteRecord) {
 }
 
 
-function handleAudibleEnd(siteRecord) {
+export function handleAudibleEnd(siteRecord) {
   siteRecord.audible = false
   if (!siteRecord.focused && siteRecord.initDate) {
     siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000 );
@@ -103,7 +106,7 @@ function handleAudibleEnd(siteRecord) {
 }
 
 
-function handleNoFocus(todayRecord) {
+export function handleNoFocus(todayRecord) {
     for (let site of Object.keys(todayRecord)) {
       console.log(site, "audible", !todayRecord[site].audible)
       if (todayRecord[site].audible) {
@@ -122,7 +125,7 @@ function handleNoFocus(todayRecord) {
     return todayRecord
 }
 
-function handleChangeFocus(todayRecord, host) {
+export function handleChangeFocus(todayRecord, host) {
   for (let site of Object.keys(todayRecord)) {
 
     if (site === host) {
@@ -139,4 +142,12 @@ function handleChangeFocus(todayRecord, host) {
 
   console.warn("record after handleChangeFocus", todayRecord)
   return todayRecord
+}
+
+async function checkToggleAudible(site) {
+  let audibleTabs = await chrome.tabs.query({audible : true});
+  if (audibleTabs.length > 0 && audibleTabs.map(x => new URL(x.url).host).includes(site)) {
+    return false;
+  }
+  return true;
 }
