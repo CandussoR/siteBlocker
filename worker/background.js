@@ -2,6 +2,7 @@ import { template_sites } from './sites.js'
 import './blocker.js'
 import './alarms.js'
 
+
 chrome.runtime.onInstalled.addListener(async () => {
     let {sites} = await chrome.storage.local.get("sites")
     if (sites === undefined || sites.length === 0) {
@@ -18,6 +19,8 @@ chrome.runtime.onStartup.addListener(async () => {
     let todate = date.toISOString().split('T')[0] ;
 
     let { records = {} } = await chrome.storage.local.get('records') ;
+    if (Object.keys(records).includes(todate)) return ;
+
     let { sites = [] } = await chrome.storage.local.get('sites') ;
     let {cleanRecords: lastCleaned = []} = await chrome.storage.local.get('lastCleaned') ;
     if (records.length === 0 && sites.length === 0) return ;
@@ -33,6 +36,7 @@ chrome.runtime.onStartup.addListener(async () => {
     }
 
     await chrome.storage.local.set({records : records}) ;
+    await chrome.storage.local.set({lastCleaned : todate})
 }) 
 
 function cleanRecords(lastCleaned, records, todate) {
@@ -42,10 +46,14 @@ function cleanRecords(lastCleaned, records, todate) {
     
     for (let i= lastCleanIndex ; i < keys.length -1 ; i++) {
         if (keys[i] >= todate) continue ;
-        let curr = records[keys[i]] ;
-        let props = Object.keys(curr) ;
-        for (let j=0 ; j < props.length ; j++) {
-            if (curr[props[j]].length !== 0) { curr[props[j]] = curr[props[j]].totalTime } ;
+        let recDate = records[keys[i]] ;
+        let sites = Object.keys(recDate) ;
+        for (let j=0 ; j < sites.length ; j++) {
+            if (recDate[sites[j]].totalTime = 0) {
+                delete recDate[sites[j]]
+            } else if (recDate[sites[j]].length !== 0) { 
+                recDate[sites[j]] = recDate[sites[j]].totalTime 
+            } ;
         }
     }
 
