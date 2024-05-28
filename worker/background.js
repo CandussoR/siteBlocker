@@ -2,6 +2,7 @@ import { template_sites } from './sites.js'
 import './blocker.js'
 import './alarms.js'
 
+
 chrome.runtime.onInstalled.addListener(async () => {
     let {sites} = await chrome.storage.local.get("sites")
     if (sites === undefined || sites.length === 0) {
