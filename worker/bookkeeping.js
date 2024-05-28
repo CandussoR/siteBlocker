@@ -132,7 +132,7 @@ export function handleChangeFocus(todayRecord, host) {
       todayRecord[site].focused = true;
       if (!todayRecord[site].initDate) todayRecord[site].initDate = Date.now();
       continue;
-    } else if (todayRecord[site].initDate) {
+    } else if (todayRecord[site].initDate && !todayRecord[site].audible) {
       todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
       todayRecord[site].initDate = null;
     }
