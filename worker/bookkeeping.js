@@ -17,7 +17,7 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
           todayRecord[host] = handleAudibleEnd(todayRecord[host])
           break;
         case ('open'):
-          todayRecord[host] = await handleOpen(todayRecord[host], tabId, host)
+          todayRecord = await handleOpen(todayRecord, tabId, host)
           break;
         case ('close') :
           todayRecord = handleClose(todayRecord, tabId)
@@ -25,12 +25,18 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
         case ('no-focus') :
           todayRecord = handleNoFocus(todayRecord)
           break;
-        case ('change-focus') : 
+        case ('change-focus') :
           todayRecord = handleChangeFocus(todayRecord, host)
           break;
       }
 
       console.log("we will set this in records", records)
+      // Debugging
+      for (let site in todayRecord) {
+        if (todayRecord[site].totalTime > 1700000000) {
+          throw Error(`TotalTime has been wrongly set after event ${flag} in ${tabId} with host ${host}`)
+        }
+      }
       await chrome.storage.local.set({records : records})
     } catch (error) {
       console.log("Error in bookkeeping, avorting any change", error)
@@ -42,25 +48,34 @@ function getTodayRecord(records) {
     return records[date]
 }
 
-export async function handleOpen(siteRecord, tabId, host) {
+export async function handleOpen(todayRecord, tabId, host) {
+  for (let site of Object.keys(todayRecord)) {
+    if (todayRecord[site].tabId && todayRecord[site].tabId.includes(tabId)) {
+      await handleClose(todayRecord, tabId)
+    }
+  }
+
+  let siteRecord = todayRecord[host]
   if (siteRecord.tabId && !siteRecord.tabId.includes(tabId)) siteRecord.tabId.push(tabId)
   else if (!siteRecord.tabId) siteRecord.tabId = [tabId]
 
+  // Uncomment this for testing or mock doesn't work
+  console.log(await chrome.tabs.query({active: true}))
   let focused = await chrome.tabs.query({active: true});
-  console.log(focused)
-  console.log(focused, focused[0])
-  if (focused[0] && new URL(focused[0].url).host === host) {
-    siteRecord.focused = true 
+  console.log("focused", focused)
+  if (focused && focused[0] && new URL(focused[0].url).host === host) {
+    siteRecord.focused = true
     siteRecord.initDate = Date.now()
   }
   console.log("todayRecord after open", siteRecord)
-  return siteRecord
+
+  return todayRecord
 }
 
 export async function handleClose(todayRecord, tabId) {
 
   for (let site of Object.keys(todayRecord)) {
-    if (!todayRecord[site].tabId || !todayRecord[site].tabId.includes(tabId)) { continue; } 
+    if (!todayRecord[site].tabId || !todayRecord[site].tabId.includes(tabId)) { continue; }
 
     if (todayRecord[site].tabId.length > 1) {
       if (todayRecord[site].audible && await checkToggleAudible(site)) {todayRecord[site].audible = false}
@@ -70,13 +85,13 @@ export async function handleClose(todayRecord, tabId) {
       todayRecord[site].tabId = null
       todayRecord[site].focused = false;
       todayRecord[site].audible = false;
-    } 
+    }
 
     if (todayRecord[site].initDate && todayRecord[site].audible) {
       return todayRecord;
     }
 
-    console.log(todayRecord[site].initDate && !todayRecord[site].audible)
+    console.log(todayRecord[site].initDate, Date.now())
     todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
     todayRecord[site].initDate = null;
     console.assert(todayRecord[site].initDate === null)
@@ -99,7 +114,7 @@ export function handleAudibleEnd(siteRecord) {
   siteRecord.audible = false
   if (!siteRecord.focused && siteRecord.initDate) {
     siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000 );
-    siteRecord.initDate = null; 
+    siteRecord.initDate = null;
   }
   console.warn("siteRecord after handleAudibleEnd", siteRecord)
   return siteRecord
@@ -127,7 +142,6 @@ export function handleNoFocus(todayRecord) {
 
 export function handleChangeFocus(todayRecord, host) {
   for (let site of Object.keys(todayRecord)) {
-
     if (site === host) {
       todayRecord[site].focused = true;
       if (!todayRecord[site].initDate) todayRecord[site].initDate = Date.now();
@@ -143,6 +157,7 @@ export function handleChangeFocus(todayRecord, host) {
   console.warn("record after handleChangeFocus", todayRecord)
   return todayRecord
 }
+
 
 async function checkToggleAudible(site) {
   let audibleTabs = await chrome.tabs.query({audible : true});
