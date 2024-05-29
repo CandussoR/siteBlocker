@@ -2,7 +2,8 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     try {
       console.log("In bookkeeping I have received", flag, tabId, host)
 
-      let { records = [] } = await chrome.storage.local.get('records')
+      let {records = [] } = await chrome.storage.local.get('records')
+      console.log(records)
       let todayRecord = getTodayRecord(records)
       if (!todayRecord) {
         console.error("No record has been set for today yet, a problem must have occured on startUp, aborting.")
@@ -33,7 +34,7 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
       console.log("we will set this in records", records)
       // Debugging
       for (let site in todayRecord) {
-        if (todayRecord[site].totalTime > 1700000000) {
+        if (todayRecord[site].totalTime > 170000000) {
           throw Error(`TotalTime has been wrongly set after event ${flag} in ${tabId} with host ${host}`)
         }
       }
@@ -49,18 +50,19 @@ function getTodayRecord(records) {
 }
 
 export async function handleOpen(todayRecord, tabId, host) {
+  // Deleting tab from last domain if it has changed
   for (let site of Object.keys(todayRecord)) {
-    if (todayRecord[site].tabId && todayRecord[site].tabId.includes(tabId)) {
+    if (todayRecord[site].tabId && todayRecord[site].tabId.includes(tabId) && site !== host) {
       await handleClose(todayRecord, tabId)
     }
   }
-
+  
+  // Ascribing tab to domain
   let siteRecord = todayRecord[host]
   if (siteRecord.tabId && !siteRecord.tabId.includes(tabId)) siteRecord.tabId.push(tabId)
   else if (!siteRecord.tabId) siteRecord.tabId = [tabId]
 
-  // Uncomment this for testing or mock doesn't work
-  console.log(await chrome.tabs.query({active: true}))
+  // Handling focus and initDate
   let focused = await chrome.tabs.query({active: true});
   console.log("focused", focused)
   if (focused && focused[0] && new URL(focused[0].url).host === host) {
@@ -75,10 +77,12 @@ export async function handleOpen(todayRecord, tabId, host) {
 export async function handleClose(todayRecord, tabId) {
 
   for (let site of Object.keys(todayRecord)) {
-    if (!todayRecord[site].tabId || !todayRecord[site].tabId.includes(tabId)) { continue; }
-
-    if (todayRecord[site].tabId.length > 1) {
-      if (todayRecord[site].audible && await checkToggleAudible(site)) {todayRecord[site].audible = false}
+    if (!todayRecord[site].tabId || !todayRecord[site].tabId.includes(tabId)) { 
+      continue; 
+    } else if (todayRecord[site].tabId.length > 1) {
+      if (todayRecord[site].audible && await checkToggleAudible(site)) {
+        todayRecord[site].audible = false
+      }
       let tabIndex = todayRecord[site].tabId.findIndex(x => x === tabId)
       todayRecord[site].tabId.splice(tabIndex, 1)
     } else {
@@ -87,14 +91,12 @@ export async function handleClose(todayRecord, tabId) {
       todayRecord[site].audible = false;
     }
 
-    if (todayRecord[site].initDate && todayRecord[site].audible) {
+    if ((todayRecord[site].initDate && todayRecord[site].audible) || !todayRecord[site].initDate) {
       return todayRecord;
     }
-
-    console.log(todayRecord[site].initDate, Date.now())
+    
     todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
     todayRecord[site].initDate = null;
-    console.assert(todayRecord[site].initDate === null)
     console.log("after close", todayRecord)
   }
 

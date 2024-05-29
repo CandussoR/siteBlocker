@@ -17,13 +17,13 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     if (windowId === -1) {
       bookkeeping('no-focus')
     } else {
-      let [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      let [tab] = await chrome.tabs.query({ active: true });
       console.log("refocused window on following tab", tab)
+
       let restrictedSites = await getRestrictedSites();
-      let url = tab.url
-      if (!url) return ;
-      if (["chrome://newtab/", "redirected/redirected.html"].includes(url)) return;
-      let host = new URL(url).host
+      if (!tab.url || ["chrome://newtab/", "redirected/redirected.html"].includes(tab.url)) return ;
+
+      let host = new URL(tab.url).host
       if (!restrictedSites.map(x => x.name).includes(host)) return ; 
       bookkeeping('change-focus', tab.tabId, host)
     }
