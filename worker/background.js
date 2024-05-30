@@ -1,5 +1,5 @@
 import { template_sites } from './sites.js'
-import './blocker.js'
+import './blocker/blocker.js'
 import './alarms.js'
 
 

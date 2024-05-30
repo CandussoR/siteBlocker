@@ -5,10 +5,26 @@ export let fakeRecord = {
   },
 };
 
-let fakeSites = {
+export let fakeGroup = {
+  groups : [
+    {
+      name : 'Test',
+      restrictions : {
+        totalTime : [
+          {
+            days : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+            totalTime : 60
+          }
+        ]
+      }
+    }
+  ]
+}
+ 
+export let fakeSites = {
   sites: [
     {
-      group: "Divertissement",
+      group: "Test",
       name: "test.com",
       restrictions: {
         timeSlot: [
@@ -31,8 +47,8 @@ let fakeSites = {
       },
     },
     {
-      group: "Divertissement",
-      name: "gogoanime.run",
+      group: "Test",
+      name: "test2.com",
       restrictions: {
         timeSlot: [
           {
@@ -44,11 +60,6 @@ let fakeSites = {
           },
         ],
       },
-    },
-    {
-      group: "Musique",
-      name: "open.spotify.com",
-      restrictions: null,
     },
   ],
 };
