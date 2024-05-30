@@ -2,8 +2,7 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     try {
       console.log("In bookkeeping I have received", flag, tabId, host)
 
-      let {records = [] } = await chrome.storage.local.get('records')
-      console.log(records)
+      let { records = [] } = await chrome.storage.local.get('records')
       let todayRecord = getTodayRecord(records)
       if (!todayRecord) {
         console.error("No record has been set for today yet, a problem must have occured on startUp, aborting.")
