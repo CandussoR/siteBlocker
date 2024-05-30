@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { bookkeeping } from '../../bookkeeping.js'
+import { bookkeeping } from 'worker/blocker/bookkeeping.js'
 import { fakeRecord } from './fakeData.js'
 
 global.chrome = {
@@ -8,6 +8,9 @@ global.chrome = {
             get : vi.fn().mockResolvedValue({records : fakeRecord}),
             set : vi.fn()
         }
+    },
+    tabs : {
+      query : vi.fn()
     }
 }
 
@@ -17,6 +20,7 @@ describe('bookkeeping', () => {
       // Reset mocks before each test
       global.chrome.storage.local.get.mockReset()
       global.chrome.storage.local.set.mockReset()
+      global.chrome.tabs.query.mockReset()
       vi.useFakeTimers()
       vi.setSystemTime(new Date(2024,4,21,10,0,0))
     })
@@ -25,23 +29,39 @@ describe('bookkeeping', () => {
         vi.useRealTimers()
     })
     
-    it('updates data on tab open', async () => {
+    it('updates tabId on tab open without focus', async () => {
         global.chrome.storage.local.get.mockResolvedValueOnce({records : fakeRecord})
+        global.chrome.tabs.query.mockResolvedValueOnce([])
         await bookkeeping('open', 100000000, 'test.com')
         expect(global.chrome.storage.local.set).toHaveBeenCalledWith({
             records: {
                 "2024-05-21": {
-                  "test.com": { audible: false, focused: false, initDate: Date.now(), tabId: 100000000, totalTime: 0, },
+                  "test.com": { audible: false, focused: false, initDate: null, tabId: [100000000], totalTime: 0, },
                   "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
                 }
             },
           })
     })
 
+    it('updates tabId focused and initDate on tab open with focus', async () => {
+      global.chrome.storage.local.get.mockResolvedValueOnce({records : fakeRecord})
+      global.chrome.tabs.query.mockResolvedValueOnce([{url : 'https://test.com', active : true}])
+      await bookkeeping('open', 100000000, 'test.com')
+      expect(global.chrome.storage.local.set).toHaveBeenCalledWith({
+          records: {
+              "2024-05-21": {
+                "test.com": { audible: false, focused: true, initDate: Date.now(), tabId: [100000000], totalTime: 0, },
+                "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
+              }
+          },
+        })
+  })
+
     it('updates data on tab close', async () => {
       global.chrome.storage.local.get.mockResolvedValueOnce({
-        records: { "2024-05-21": { "test.com": { audible: false, focused: false, initDate: Date.now(), tabId: 100000000, totalTime: 0, }, }, },
+        records: { "2024-05-21": { "test.com": { audible: false, focused: false, initDate: Date.now(), tabId: [ 100000000 ], totalTime: 0, }, }, },
       });
+      global.chrome.tabs.query.mockResolvedValueOnce([])
       vi.setSystemTime(new Date(2024, 4, 21, 10, 2, 0));
       await bookkeeping("close", 100000000);
       expect(global.chrome.storage.local.set).toHaveBeenCalledWith({

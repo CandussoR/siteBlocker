@@ -9,117 +9,113 @@ export async function getRestrictedSites() {
 
 export async function isRestricted(host, sites) {
     const sitesName = sites.map(x => x.name)
-    console.log(sitesName, "sitesName")
 
-    const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
-    const currentTime = new Date().toLocaleTimeString('fr-FR')
-    
     let siteIndex = sitesName.findIndex(x => x === host)
     let siteRestrictions = sites[siteIndex].restrictions
     let siteGroup = sites[siteIndex].group
-
+    
     if (siteGroup) {
         let { groups = [] } = await chrome.storage.local.get('groups')
         let groupIndex = groups.findIndex(g => g.name === siteGroup)
         let groupRestrictions = groups[groupIndex].restrictions
         
         if (groupRestrictions) {
-            let groupRestrictionsKeys = Object.keys(groupRestrictions)
-            let siteRestrictionsKeys = siteRestrictions ? Object.keys(siteRestrictions) : []
-                
-            let restricted = false;
-
-            if (groupRestrictions.timeSlot) {
-              console.log('yep timeslot')
-                let checkSite = siteRestrictionsKeys.includes('timeSlot')
-                restricted = checkTimeSlotRestriction(
-                  currentDay,
-                  currentTime,
-                  groupRestrictions.timeSlot,
-                  checkSite,
-                  checkSite ? siteRestrictions.timeSlot : undefined
-                );
-            }
-            if (restricted) return restricted;
-
-            if (groupRestrictions.totalTime) {
-              console.log("It's not the time for a timeSlot or there is no timeSlot at all, lemme check totalTime")
-              let checkSite = siteRestrictionsKeys.includes('totalTime')
-              restricted = checkTotalTimeRestriction(currentDay, host, groupRestrictions.totalTime, checkSite, checkSite ? siteRestrictions.totalTime : undefined)
-            }
-            if (restricted) return restricted;
-
-            return restricted
-            }
+            return isGroupRestricted(host, groupRestrictions, siteRestrictions)
         }
-        
-    if (siteRestrictions && siteRestrictions.timeSlot) { return checkSlots(siteRestrictions.timeSlot, currentDay, currentTime) }
-    if (siteRestrictions && siteRestrictions.totalTime) {}
+    }
+    
+    let { records = {} } = await chrome.storage.local.get('records') ;
+    let todayRecord = records[date]
+    if (siteRestrictions && siteRestrictions.timeSlot) { 
+        return checkSlots(siteRestrictions.timeSlot) 
+    }
+    if (siteRestrictions && siteRestrictions.totalTime 
+        && timeLeftBeforeRestriction(currentDay, todayRecord[host], siteRestrictions.totalTime)) {
+        await chrome.alarms.create(`${host}-total-time-restriction-begin`, {delayInMinutes : timeLeft / 60})
+        }
 
     return false
 }
 
-function checkTimeSlotRestriction(currentDay, currentTime, groupRestriction, checkSite, siteRestriction = undefined) {
-  let result = checkSlots(groupRestriction, currentDay, currentTime);
-  if (!result &&
-      checkSite &&
-      siteRestriction !== groupRestriction
-  ) {
-  result = checkSlots( siteRestriction, currentDay, currentTime);
-  }
 
+async function isGroupRestricted(host, groupRestrictions, siteRestrictions) {        
+    let restricted = false;
+    console.log(groupRestrictions)
+
+    if (groupRestrictions.timeSlot) {
+        restricted = isRestrictedByTimeSlot(groupRestrictions.timeSlot,siteRestrictions.timeSlot);
+    }
+
+    if (!restricted && groupRestrictions.totalTime) {
+        console.log("not retricted and groupRestrictions.totalTime", groupRestrictions.totalTime)
+        restricted = await isRestrictedByTotalTime(host, groupRestrictions.totalTime, siteRestrictions.totalTime)
+    }
+
+    return restricted
+}
+
+
+function isRestrictedByTimeSlot(groupRestriction, siteRestriction) {
+  let result = checkSlots(groupRestriction);
+  if (!result && checkSite && siteRestriction !== groupRestriction) {
+    result = checkSlots( siteRestriction);
+  }
   return result
 }
 
-export async function checkTotalTimeRestriction(currentDay, host, groupRestriction, checkSite, siteRestriction = undefined) {
 
+export async function isRestrictedByTotalTime(host, groupRestriction, siteRestriction) {
+    const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
     let date = new Date().toISOString().split('T')[0] ;
     let timeLeft = -1
-    console.log("Let me get the records")
     let { records = {} } = await chrome.storage.local.get('records') ;
-  
     let todayRecord = records[date]
-    console.log("Today, today... got it")
-    console.log("todayRecord", todayRecord)
-    console.log("Group restrictions I'm about to iterate on", JSON.stringify(groupRestriction))
-    for (let i = 0; i < groupRestriction.length; i++) {
 
+    console.log("groupRestriction in isRestrictedByTotalTim", groupRestriction)
+
+    for (let i = 0; i < groupRestriction.length; i++) {
+        console.log("groupRestriction[i]", groupRestriction[i], groupRestriction[i].days.includes(currentDay))
         if (!groupRestriction[i].days.includes(currentDay)) continue;
 
-        console.log("There is a restriction on today, let me check the sites of this group.")
         let { sites = [] } = await chrome.storage.local.get('sites') ;
         let [groupName] = sites.filter(x => x.name === host).map(x => x.group)
         let sitesOfGroup = sites.filter(x => x.group === groupName).map(x => x.name) ;
 
-        console.log("Quick math, bear with me.")
         let groupTime = 0;
         for (let i=0 ; i<sitesOfGroup.length ; i++) {
           groupTime += todayRecord[sitesOfGroup[i]].totalTime
         }
 
-        console.log("The time for the whole group would be...", groupTime)
-        console.log("Is that above what we authorized ?", groupTime >= groupRestriction[i].totalTime)
         if (groupTime >= groupRestriction[i].totalTime) return true;
 
         timeLeft = groupRestriction[i].totalTime - groupTime
       }
 
-    console.log("It seems to be good for the group, let me check for this site in particular")
-    if (checkSite && siteRestriction !== groupRestriction) {
-      console.log("entered the condition")
-      for (let i = 0; i < siteRestriction.length; i++) {
-        if (!siteRestriction[i].days.includes(currentDay)) continue;
-        if (siteRestriction[i].totalTime >= todayRecord[host].totalTime) return true;
-        timeLeft = Math.min(timeLeft, todayRecord[host].totalTime - siteRestriction[i].totaltime)
-      }
+    if (siteRestriction && siteRestriction !== groupRestriction) {
+      timeLeft = Math.min(timeLeft, timeLeftBeforeRestriction(currentDay, todayRecord[host], siteRestriction))
+      if (!timeLeft) return true;
     }
 
-    console.log("Nope, we're good to go ! I'll set an alarm, until then enjoy !")
     await chrome.alarms.create(`${host}-total-time-restriction-begin`, {delayInMinutes : timeLeft / 60})
     return false;
 }
 
-function checkSlots(slots, currentDay, currentTime) {
+
+function timeLeftBeforeRestriction(currentDay, hostRecord, restriction) {
+    let timeLeft = 0
+    for (let i = 0; i < restriction.length; i++) {
+        if (!restriction[i].days.includes(currentDay)) continue;
+        if (restriction[i].totalTime >= hostRecord.totalTime) return 0;
+        timeLeft = hostRecord.totalTime - restriction[i].totaltime
+      }
+    return timeLeft;
+}
+
+
+function checkSlots(slots) {
+    const currentTime = new Date().toLocaleTimeString('fr-FR')
+    const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
+
     for (let i=0 ; i < slots.length ; i++) {
       if (slots[i].days.includes(currentDay)) {
         let spans = slots[i].time;

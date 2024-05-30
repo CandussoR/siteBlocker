@@ -63,7 +63,6 @@ export async function handleOpen(todayRecord, tabId, host) {
 
   // Handling focus and initDate
   let focused = await chrome.tabs.query({active: true});
-  console.log("focused", focused)
   if (focused && focused[0] && new URL(focused[0].url).host === host) {
     siteRecord.focused = true
     siteRecord.initDate = Date.now()
