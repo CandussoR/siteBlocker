@@ -1,3 +1,5 @@
+import { getTodayRecord } from "./blocker/bookkeeping";
+
 chrome.storage.onChanged.addListener(async (changes, area) => {
     if (changes.sites && (changes.sites.newValue.length > changes.sites.oldValue.length)) {
         let date = new Date().toISOString().split('T')[0] ;
@@ -82,6 +84,11 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     let [n, r, type] = alarm.name.split('-')
     let isGroup = (n.indexOf('.') === -1)
 
+    if (alarm.name.includes('-consecutive-time')) {
+        handleConsecutiveTimeAlarm(alarm.name);
+        return;
+    }
+
     if (type === 'end') {
         chrome.runtime.sendMessage({restriction : "ended"})
         chrome.alarms.clear(alarm.name)
@@ -112,3 +119,26 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 
     chrome.alarms.clear(alarm.name)
 })
+
+async function handleConsecutiveTimeAlarm(name) {
+    let n = name.split('-').shift()
+
+    if ('-end' in name) {
+        let { records = [] } = await chrome.storage.local.get('records')
+        let todayRecord = getTodayRecord(records)
+        todayRecord[n].consecutiveTime = 0
+        await chrome.storage.local.set({records : records})
+        return;
+    }
+
+    let key = '.' in n ? 'groups' : 'sites'
+    try {
+        let {data = []} = await chrome.storage.local.get(key)
+        let siteRestriction = data.sites.filter(x => x.name === n).map(x => x.restrictions.consecutiveTime)
+        let currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date())
+        siteRestriction = siteRestriction.filter(x => x.days.includes(currentDay))
+        await chrome.alarms.create(`${n}-consecutive-time-restriction-end`, {delayInMinutes : siteRestriction.pause / 60})
+    } catch (error) {
+        console.error(`Error when fetching ${key} from chrome storage local in handleConsecutiveAlarm : ${error}`)
+    }    
+}
