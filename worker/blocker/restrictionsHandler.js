@@ -26,14 +26,28 @@ export async function isRestricted(host, sites) {
     
     let { records = {} } = await chrome.storage.local.get('records') ;
     let todayRecord = records[date]
-    if (siteRestrictions && siteRestrictions.timeSlot) { 
-        return checkSlots(siteRestrictions.timeSlot) 
+    if (siteRestrictions && siteRestrictions.timeSlot && checkSlots(siteRestrictions.timeSlot)) { 
+        return true;
     }
-    if (siteRestrictions && siteRestrictions.totalTime 
-        && timeLeftBeforeRestriction(currentDay, todayRecord[host], siteRestrictions.totalTime)) {
-        await chrome.alarms.create(`${host}-total-time-restriction-begin`, {delayInMinutes : timeLeft / 60})
-        }
 
+    if (siteRestrictions && siteRestrictions.totalTime) {
+        let timeLeft = timeLeftBeforeRestriction('totalTime', currentDay, todayRecord[host], siteRestrictions.totalTime);
+        if (timeLeft) {
+          await chrome.alarms.create(`${host}-total-time-restriction-begin`, {delayInMinutes : timeLeft / 60});
+        } else {
+          return true;
+        }
+    }
+
+    if (siteRestrictions && siteRestrictions.consecutiveTime) {
+        let timeLeft = timeLeftBeforeRestriction('consecutiveTime', currentDay, todayRecord[host], siteRestrictions.consecutiveTime)
+        if (timeLeft) {
+          await chrome.alarms.create(`${host}-consecutive-time-restriction-begin`, {delayInMinutes : timeLeft/60})
+        } else {
+          return true;
+      }
+    }
+    
     return false
 }
 
@@ -49,6 +63,10 @@ async function isGroupRestricted(host, groupRestrictions, siteRestrictions) {
     if (!restricted && groupRestrictions.totalTime) {
         console.log("not retricted and groupRestrictions.totalTime", groupRestrictions.totalTime)
         restricted = await isRestrictedByTotalTime(host, groupRestrictions.totalTime, siteRestrictions.totalTime)
+    }
+
+    if (!restricted && groupRestrictions.consecutiveTime) {
+      restriction = await isRestrictedByConsecutiveTime(host, groupRestrictions.consecutiveTime, siteRestrictions.consecutiveTime)
     }
 
     return restricted
@@ -92,7 +110,7 @@ export async function isRestrictedByTotalTime(host, groupRestriction, siteRestri
       }
 
     if (siteRestriction && siteRestriction !== groupRestriction) {
-      timeLeft = Math.min(timeLeft, timeLeftBeforeRestriction(currentDay, todayRecord[host], siteRestriction))
+      timeLeft = Math.min(timeLeft, timeLeftBeforeRestriction('totalTime', currentDay, todayRecord[host], siteRestriction))
       if (!timeLeft) return true;
     }
 
@@ -100,13 +118,47 @@ export async function isRestrictedByTotalTime(host, groupRestriction, siteRestri
     return false;
 }
 
+async function isRestrictedByConsecutiveTime(host, groupRestriction, siteRestriction) {
+  const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
+  let date = new Date().toISOString().split('T')[0] ;
+  let timeLeft = -1
+  let { records = {} } = await chrome.storage.local.get('records') ;
+  let todayRecord = records[date] 
 
-function timeLeftBeforeRestriction(currentDay, hostRecord, restriction) {
+  for (let i = 0; i < groupRestriction.length; i++) {
+    console.log("groupRestriction[i]", groupRestriction[i], groupRestriction[i].days.includes(currentDay))
+    if (!groupRestriction[i].days.includes(currentDay)) continue;
+
+    let { sites = [] } = await chrome.storage.local.get('sites') ;
+    let [groupName] = sites.filter(x => x.name === host).map(x => x.group)
+    let sitesOfGroup = sites.filter(x => x.group === groupName).map(x => x.name) ;
+
+    let groupTime = 0;
+  for (let i=0 ; i<sitesOfGroup.length ; i++) {
+      groupTime += todayRecord[sitesOfGroup[i]].consecutiveTime || 0
+    }
+
+    if (groupTime >= groupRestriction[i].consecutiveTime) return true;
+
+    timeLeft = groupRestriction[i].consecutiveTime - groupTime
+  }
+  
+  if (siteRestriction && siteRestriction !== groupRestriction) {
+    timeLeft = Math.min(timeLeft, timeLeftBeforeRestriction('consecutiveTime', currentDay, todayRecord[host], siteRestriction))
+    if (!timeLeft) return true;
+  }
+  
+  await alarms.chrome.create(`${host}-consecutive-time-restriction-begin`, {delayInMinutes : timeLeft/60})
+  return false
+}
+
+
+function timeLeftBeforeRestriction(restrictionKey, currentDay, hostRecord, restriction) {
     let timeLeft = 0
     for (let i = 0; i < restriction.length; i++) {
         if (!restriction[i].days.includes(currentDay)) continue;
-        if (restriction[i].totalTime >= hostRecord.totalTime) return 0;
-        timeLeft = hostRecord.totalTime - restriction[i].totaltime
+        if (restriction[i][restrictionKey] >= hostRecord[restrictionKey]) return 0;
+        timeLeft = hostRecord[restrictionKey] - restriction[i][restrictionKey]
       }
     return timeLeft;
 }
