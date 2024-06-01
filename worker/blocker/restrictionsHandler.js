@@ -7,12 +7,19 @@ export async function getRestrictedSites() {
     return sites
 }
 
-export async function isRestricted(host, sites) {
+export async function isRestricted(host, sites) { 
+    // check for alarms.
     const sitesName = sites.map(x => x.name)
-
+    
     let siteIndex = sitesName.findIndex(x => x === host)
     let siteRestrictions = sites[siteIndex].restrictions
     let siteGroup = sites[siteIndex].group
+
+    let alarms = await chrome.alarms.getAll()
+    console.log("alarms name contains group ?", siteGroup, alarms.map(x => x.name), alarms.map(x => x.name.includes(siteGroup) && x.name.includes('-end')))
+    alarms = alarms.filter(x => (x.name.includes(siteGroup) && x.name.includes('-end')) || (x.name.includes(host) && x.name.includes('-end')))
+    console.log("alarms after filter", alarms, alarms.length)
+    if (alarms.length !== 0) return true;
     
     if (siteGroup) {
         let { groups = [] } = await chrome.storage.local.get('groups')
@@ -25,6 +32,7 @@ export async function isRestricted(host, sites) {
     }
     
     let { records = {} } = await chrome.storage.local.get('records') ;
+    let date = new Date().toISOString().split('T')[0] ;
     let todayRecord = records[date]
     if (siteRestrictions && siteRestrictions.timeSlot && checkSlots(siteRestrictions.timeSlot)) { 
         return true;
@@ -89,7 +97,7 @@ export async function isRestrictedByTotalTime(host, groupRestriction, siteRestri
     let { records = {} } = await chrome.storage.local.get('records') ;
     let todayRecord = records[date]
 
-    console.log("groupRestriction in isRestrictedByTotalTim", groupRestriction)
+    console.log("groupRestriction in isRestrictedByTotalTime", groupRestriction)
 
     for (let i = 0; i < groupRestriction.length; i++) {
         console.log("groupRestriction[i]", groupRestriction[i], groupRestriction[i].days.includes(currentDay))
@@ -118,7 +126,7 @@ export async function isRestrictedByTotalTime(host, groupRestriction, siteRestri
     return false;
 }
 
-async function isRestrictedByConsecutiveTime(host, groupRestriction, siteRestriction) {
+export async function isRestrictedByConsecutiveTime(host, groupRestriction, siteRestriction) {
   const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
   let date = new Date().toISOString().split('T')[0] ;
   let timeLeft = -1
@@ -148,7 +156,7 @@ async function isRestrictedByConsecutiveTime(host, groupRestriction, siteRestric
     if (!timeLeft) return true;
   }
   
-  await alarms.chrome.create(`${host}-consecutive-time-restriction-begin`, {delayInMinutes : timeLeft/60})
+  await chrome.alarms.create(`${host}-consecutive-time-restriction-begin`, {delayInMinutes : timeLeft/60})
   return false
 }
 
