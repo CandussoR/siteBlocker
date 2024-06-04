@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { isRestricted, isRestrictedByTotalTime, isRestrictedByConsecutiveTime } from '../../worker/blocker/restrictionsHandler.js'
+import { isRestricted, isGroupRestrictedByTotalTime, isGroupRestrictedByConsecutiveTime } from '../../worker/blocker/restrictionsHandler.js'
 import { fakeRecord, fakeGroup, fakeSites } from './fakeData.js'
 
 global.chrome = {
@@ -34,7 +34,7 @@ describe('totalTime', () => {
         let [groupRestriction] = fakeGroup.groups.filter(x => x.name === 'Test')
         global.chrome.storage.local.get.mockResolvedValueOnce({records : fakeRecord})
         global.chrome.storage.local.get.mockResolvedValueOnce(fakeSites)
-        let result = await isRestrictedByTotalTime('test2.com', groupRestriction.restrictions.totalTime, false)
+        let result = await isGroupRestrictedByTotalTime('test2.com', groupRestriction.restrictions.totalTime, false)
         expect(global.chrome.alarms.create).toHaveBeenCalledWith('test2.com-total-time-restriction-begin', {delayInMinutes : 1})
         expect(result).toBe(false)
         expect(global.chrome.storage.local.get).toBeCalledTimes(2)
@@ -50,7 +50,7 @@ describe('totalTime', () => {
           };
         global.chrome.storage.local.get.mockResolvedValueOnce({records : fakeRecords})
         global.chrome.storage.local.get.mockResolvedValueOnce(fakeSites)
-        let result = await isRestrictedByTotalTime('test.com', groupRestriction.restrictions.totalTime, false)
+        let result = await isGroupRestrictedByTotalTime('test.com', groupRestriction.restrictions.totalTime, false)
         expect(result).toBe(true)
         expect(global.chrome.alarms.create).toHaveBeenCalledTimes(0)
     })
@@ -67,7 +67,7 @@ describe('totalTime', () => {
         global.chrome.storage.local.get.mockResolvedValueOnce({records : fakeRecords})
         global.chrome.storage.local.get.mockResolvedValueOnce(fakeSites)
         let totalTimeRestrictionMock = [{"days" : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"], "totalTime" : 30}]
-        let result = await isRestrictedByTotalTime('test.com', groupRestriction.restrictions.totalTime, true, totalTimeRestrictionMock)
+        let result = await isGroupRestrictedByTotalTime('test.com', groupRestriction.restrictions.totalTime, totalTimeRestrictionMock)
         expect(result).toBe(true)
         expect(global.chrome.alarms.create).toHaveBeenCalledTimes(0)
     })
@@ -82,7 +82,7 @@ describe('totalTime', () => {
           };
         global.chrome.storage.local.get.mockResolvedValueOnce({records : fakeRecords})
         global.chrome.storage.local.get.mockResolvedValueOnce(fakeSites)
-        let result = await isRestrictedByTotalTime('test.com', groupRestriction.restrictions.totalTime, false)
+        let result = await isGroupRestrictedByTotalTime('test.com', groupRestriction.restrictions.totalTime, false)
 
         expect(result).toBe(false)
         expect(global.chrome.alarms.create).toHaveBeenCalledWith('test.com-total-time-restriction-begin', {delayInMinutes : 0.5})
@@ -107,18 +107,52 @@ describe('totalTime', () => {
         async () => {
           // Setup
           let mockRecord = { "records" : { '2024-05-21' : {'test.com' : {consecutiveTime : 0, totalTime : 0}}}}
-          let mockSite = { sites : [{name : 'test.com', restrictions : null}] }
+          let mockSite = { sites : 
+            [
+              {
+                name : 'test.com', 
+                restrictions : {
+                  consecutiveTime : [
+                    {"days" : ['Tuesday'], 
+                    consecutiveTime: 30*60, pause: 60*60}
+                  ]
+                } 
+              }
+            ] 
+          }
           global.chrome.storage.local.get.mockResolvedValueOnce(mockRecord)
                                          .mockResolvedValueOnce(mockSite)
           let ctGroup = [{"days" : ['Tuesday'], consecutiveTime: 30*60, pause: 60*60}]
           // test
-          await isRestrictedByConsecutiveTime('test.com', ctGroup, undefined)
+          let result = await isGroupRestrictedByConsecutiveTime('test.com', ctGroup, mockSite.sites[0].restrictions.consecutiveTime)
           // result
           expect(global.chrome.storage.local.get).toHaveBeenCalledTimes(2)
+          expect(result).toBe(false)
           expect(global.chrome.alarms.create).toHaveBeenCalledWith('test.com-consecutive-time-restriction-begin', {delayInMinutes : 30})
         })
 
 
+      it('should set an alarm for Group if the time left for the group is inferior to the time for the site',
+        async () => {
+          // Setup
+          let mockRecord = { "records" : { '2024-05-21' : {'test.com' : {consecutiveTime : 0, totalTime : 0},
+                                                          'test2.com': {consecutiveTime : 29*60, totalTime : 0}
+                                                        }
+                                          }
+                            }
+          let mockSite = { sites : [{name : 'test.com', restrictions : {consecutiveTime : {days : ["Tuesday"], consecutiveTime: 30*60, pause : 30*60}}, group: 'Test'},
+                                    {name : 'test2.com', restrictions : { consecutiveTime : {days : ["Tuesday"], consecutiveTime: 30*60, pause : 30*60} }, group: 'Test'}
+          ] }
+          global.chrome.storage.local.get.mockResolvedValueOnce(mockRecord)
+                                         .mockResolvedValueOnce(mockSite)
+          let ctGroup = [{"days" : ['Tuesday'], consecutiveTime: 30*60, pause: 60*60}]
+          // test
+          let result = await isGroupRestrictedByConsecutiveTime('test.com', ctGroup, ctGroup)
+          // result
+          expect(global.chrome.storage.local.get).toHaveBeenCalledTimes(2)
+          expect(result).toBe(false)
+          expect(global.chrome.alarms.create).toHaveBeenCalledWith('Test-consecutive-time-restriction-begin', {delayInMinutes : 1})
+        })
  })
 
 
