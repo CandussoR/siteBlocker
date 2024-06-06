@@ -3,30 +3,34 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
       console.log("In bookkeeping I have received", flag, tabId, host)
 
       let { records = [] } = await chrome.storage.local.get('records')
+      console.log("records in bookkeeping after request", records)
       let todayRecord = getTodayRecord(records)
+      console.log("todayRecord", todayRecord)
       if (!todayRecord) {
         console.error("No record has been set for today yet, a problem must have occured on startUp, aborting.")
         return;
       }
 
+      console.log("todayRecord, still", todayRecord, Object.keys(todayRecord))
       switch (flag) {
         case ('audible-start'):
           todayRecord[host] = handleAudibleStart(todayRecord[host])
           break;
         case ('audible-end'):
-          todayRecord[host] = handleAudibleEnd(todayRecord[host])
+          todayRecord[host] = await handleAudibleEnd(host, todayRecord[host])
           break;
         case ('open'):
           todayRecord = await handleOpen(todayRecord, tabId, host)
           break;
         case ('close') :
-          todayRecord = handleClose(todayRecord, tabId)
+          todayRecord = await handleClose(todayRecord, tabId)
           break;
         case ('no-focus') :
-          todayRecord = handleNoFocus(todayRecord)
+          todayRecord = await handleNoFocus(todayRecord)
           break;
         case ('change-focus') :
-          todayRecord = handleChangeFocus(todayRecord, host)
+          console.log("just before entering handleChangeFocus", todayRecord)
+          todayRecord = await handleChangeFocus(todayRecord, host)
           break;
       }
 
@@ -43,8 +47,9 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     }
   }
 
-function getTodayRecord(records) {
+export function getTodayRecord(records) {
     let date = new Date().toISOString().split('T')[0] ;
+    console.log(date)
     return records[date]
 }
 
@@ -67,7 +72,6 @@ export async function handleOpen(todayRecord, tabId, host) {
     siteRecord.focused = true
     siteRecord.initDate = Date.now()
   }
-  console.log("todayRecord after open", siteRecord)
 
   return todayRecord
 }
@@ -75,28 +79,39 @@ export async function handleOpen(todayRecord, tabId, host) {
 export async function handleClose(todayRecord, tabId) {
 
   for (let site of Object.keys(todayRecord)) {
-    if (!todayRecord[site].tabId || !todayRecord[site].tabId.includes(tabId)) { 
+    let siteRecord = todayRecord[site]
+
+    if (!siteRecord.tabId || !siteRecord.tabId.includes(tabId)) { 
       continue; 
-    } else if (todayRecord[site].tabId.length > 1) {
-      if (todayRecord[site].audible && await checkToggleAudible(site)) {
-        todayRecord[site].audible = false
+    } 
+    else if (siteRecord.tabId.length > 1) {
+      if (siteRecord.audible && await checkToggleAudible(site)) {
+        siteRecord.audible = false
       }
-      let tabIndex = todayRecord[site].tabId.findIndex(x => x === tabId)
-      todayRecord[site].tabId.splice(tabIndex, 1)
-    } else {
-      todayRecord[site].tabId = null
-      todayRecord[site].focused = false;
-      todayRecord[site].audible = false;
+      let tabIndex = siteRecord.tabId.findIndex(x => x === tabId)
+      siteRecord.tabId.splice(tabIndex, 1)
+    } 
+    else {
+      siteRecord.tabId = null
+      siteRecord.focused = false;
+      siteRecord.audible = false;
     }
 
-    if ((todayRecord[site].initDate && todayRecord[site].audible) || !todayRecord[site].initDate) {
+    if ((siteRecord.initDate && siteRecord.audible) || !siteRecord.initDate) {
       return todayRecord;
     }
+
+    console.log("siteRecord", siteRecord, 'consecutiveTime' in siteRecord)
     
-    todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
-    todayRecord[site].initDate = null;
+    if ('consecutiveTime' in siteRecord) {
+      siteRecord = await bookkeepConsecutiveTime(site, siteRecord)
+    }
+
+    siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000 );
+    siteRecord.initDate = null;
     console.log("after close", todayRecord)
   }
+
 
   return todayRecord
 }
@@ -110,26 +125,38 @@ export function handleAudibleStart(siteRecord) {
 }
 
 
-export function handleAudibleEnd(siteRecord) {
+export async function handleAudibleEnd(site, siteRecord) {
+  console.log("handle audible end site and siteRecord", site, siteRecord)
   siteRecord.audible = false
+
   if (!siteRecord.focused && siteRecord.initDate) {
+
+    if ('consecutiveTime' in siteRecord) {
+      siteRecord = await bookkeepConsecutiveTime(site, siteRecord)
+    }
+
     siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000 );
     siteRecord.initDate = null;
   }
+
   console.warn("siteRecord after handleAudibleEnd", siteRecord)
   return siteRecord
 }
 
 
-export function handleNoFocus(todayRecord) {
+export async function handleNoFocus(todayRecord) {
     for (let site of Object.keys(todayRecord)) {
       console.log(site, "audible", !todayRecord[site].audible)
       if (todayRecord[site].audible) {
-        todayRecord[site].focused = false
+        todayRecord[site].focused = false;
         continue;
       }
 
       if (todayRecord[site].initDate) {
+        
+        if ('consecutiveTime' in todayRecord[site]) {
+          todayRecord[site] = await bookkeepConsecutiveTime(site, todayRecord[site])
+        }
         todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
         todayRecord[site].initDate = null;
       }
@@ -140,21 +167,28 @@ export function handleNoFocus(todayRecord) {
     return todayRecord
 }
 
-export function handleChangeFocus(todayRecord, host) {
+
+export async function handleChangeFocus(todayRecord, host) {
+
   for (let site of Object.keys(todayRecord)) {
+    let s = todayRecord[site]
     if (site === host) {
-      todayRecord[site].focused = true;
-      if (!todayRecord[site].initDate) todayRecord[site].initDate = Date.now();
+      s.focused = true;
+      if (!s.initDate) s.initDate = Date.now();
       continue;
-    } else if (todayRecord[site].initDate && !todayRecord[site].audible) {
-      todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
-      todayRecord[site].initDate = null;
+    } 
+    else if (s.focused && s.initDate && !s.audible) {
+      s.focused = false
+      if ('consecutiveTime' in s) {
+        s = await bookkeepConsecutiveTime(site, s)
+      }
+      s.totalTime += Math.round( (Date.now() - s.initDate) / 1000 );
+      s.initDate = null;
+    } 
+    else {
+      s.focused = false;
     }
-
-    todayRecord[site].focused = false;
   };
-
-  console.warn("record after handleChangeFocus", todayRecord)
   return todayRecord
 }
 
@@ -165,4 +199,16 @@ async function checkToggleAudible(site) {
     return false;
   }
   return true;
+}
+
+
+async function bookkeepConsecutiveTime(site, siteRecord) {
+  if (siteRecord.initDate 
+    && !siteRecord.audible 
+    && !siteRecord.focused) {
+      siteRecord.consecutiveTime = Math.round( (Date.now() - siteRecord.initDate) / 1000);
+      chrome.alarms.create(`${site}-consecutive-time-restriction-check`, {delayInMinutes : 2 })
+      chrome.alarms.clear(`${site}-consecutive-time-restriction-begin`)
+  }
+  return siteRecord
 }

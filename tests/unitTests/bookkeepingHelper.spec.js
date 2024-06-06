@@ -44,24 +44,6 @@ describe('handleOpen', () => {
     expect(result).toStrictEqual(expectedTodayRecord)
    })
 
-//    it('deletes tabId from older site when site changes in tab', async () => {
-//     global.chrome.tabs.query.mockResolvedValueOnce([])
-//     let todayRecord = {
-//         "test.com": { audible: false, focused: false, initDate: new Date().getTime(), tabId: [1], totalTime: 0, },
-//         "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
-//       }
-//     vi.setSystemTime(new Date(2024,4,21,10,0,0))
-//     // global.chrome.tabs.query.mockImplementationOnce(() => [])
-//     global.chrome.tabs.query.mockImplementationOnce(() => [ { url : 'https://test2.com', active: true}])
-//     let expectedTodayRecord = {
-//         "test.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 120, },
-//         "test2.com": { audible: false, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, },
-//       }    
-//     const result = await bookkeeping.handleOpen(todayRecord, 1, 'test2.com')
-//     expect(global.chrome.tabs.query).toHaveBeenCalledWith({active : true})
-//     expect(result).toStrictEqual(expectedTodayRecord)
-//    })
-
 it('deletes tabId from older site when site changes in tab', async () => {
     const initialTime = new Date(2024, 4, 21, 9, 58, 0).getTime();
     const todayRecord = {
@@ -180,9 +162,9 @@ describe('handleClose', () => {
     expect(result).toStrictEqual(expectedTodayRecord)
    })
 
-   it("shouldn't update totalTime if no initDate", async () => {
+//    it("shouldn't update totalTime if no initDate", async () => {
 
-   })
+//    })
 })
 
 describe('handleAudibleStart', () => {
@@ -219,22 +201,22 @@ describe('handleAudibleEnd', () => {
     it("doesn't calculate totalTime nor reinitialise initDate if focused", async () => {
         let siteRecord = { audible: true, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, }
         let expectedSiteRecord = { audible: false, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, }
-        const result = bookkeeping.handleAudibleEnd(siteRecord)
+        const result = await bookkeeping.handleAudibleEnd('test.com', siteRecord)
         expect(result).toStrictEqual(expectedSiteRecord)
        })
 
-    it("doesn't calculate totalTime if no initDate nor focused", () => {
+    it("doesn't calculate totalTime if no initDate nor focused", async () => {
          let siteRecord = { audible: true, focused: false, initDate: null, tabId: [1], totalTime: 0, }
         let expectedSiteRecord = { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 0, }
-        const result = bookkeeping.handleAudibleEnd(siteRecord)
+        const result = await bookkeeping.handleAudibleEnd('test.com', siteRecord)
         expect(result).toStrictEqual(expectedSiteRecord)
    })
 
-    it("calculates totalTime and reinitialises initDate on audible end when not focused", () => {
+    it("calculates totalTime and reinitialises initDate on audible end when not focused", async () => {
         let siteRecord = { audible: true, focused: false, initDate: Date.now(), tabId: [1], totalTime: 0, }
         vi.setSystemTime(new Date(2024,4,21,10,2,0))
         let expectedSiteRecord = { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 120, }
-        const result = bookkeeping.handleAudibleEnd(siteRecord)
+        const result = await bookkeeping.handleAudibleEnd('test.com', siteRecord)
         expect(result).toStrictEqual(expectedSiteRecord)
    })
 })
@@ -250,7 +232,7 @@ describe('handleNoFocus', () => {
           vi.useRealTimers()
       })
 
-    it('should return focused false for every site and calculate totalTime if not audible', () => {
+    it('should return focused false for every site and calculate totalTime if not audible', async () => {
         let todayRecord = {
             "test.com": { audible: false, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, },
             "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
@@ -260,11 +242,11 @@ describe('handleNoFocus', () => {
             "test.com": { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 120, },
             "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, }
         }
-        const result = bookkeeping.handleNoFocus(todayRecord)
+        const result = await bookkeeping.handleNoFocus(todayRecord)
         expect(result).toStrictEqual(expectedTodayRecord)
     })
     
-    it("shouldn't calculate totalTime if audible", () => { 
+    it("shouldn't calculate totalTime if audible", async () => { 
         let todayRecord = {
             "test.com": { audible: true, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, },
             "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
@@ -273,7 +255,7 @@ describe('handleNoFocus', () => {
             "test.com": { audible: true, focused: false, initDate: Date.now(), tabId: [1], totalTime: 0, },
             "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, }
         }
-        const result = bookkeeping.handleNoFocus(todayRecord)
+        const result = await bookkeeping.handleNoFocus(todayRecord)
         expect(result).toStrictEqual(expectedTodayRecord)
     })
 })
@@ -282,39 +264,39 @@ describe('handleChangeFocus', () => {
     beforeEach(() => {
         global.chrome.tabs.query.mockReset()
         vi.useFakeTimers()
-        vi.setSystemTime(new Date(2024,4,21,10,0,0))
+        vi.setSystemTime(new Date(2024,4,21,9,58,0))
       })
       
       afterEach(() => {
           vi.useRealTimers()
       })
 
-    it('should update totalTime and focused if not audible', () => {
+    it('should update totalTime and focused if not audible', async () => {
         let todayRecord = {
             "test.com": { audible: false, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, },
             "test2.com": { audible: false, focused: false, initDate: null, tabId: [2], totalTime: 0, },
         }
-        vi.setSystemTime(new Date(2024,4,21,10,2,0))
+        vi.setSystemTime(new Date(2024,4,21,10,0,0))
         let expectedTodayRecord = {
             "test.com": { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 120, },
             "test2.com": { audible: false, focused: true, initDate: Date.now(), tabId: [2], totalTime: 0, }
         }
-        const result = bookkeeping.handleChangeFocus(todayRecord, 'test2.com')
+        const result = await bookkeeping.handleChangeFocus(todayRecord, 'test2.com')
         expect(result).toStrictEqual(expectedTodayRecord)
     })
     
-    it("shouldn't update totalTime if audible", () => { vi.setSystemTime(new Date(2024,4,21,9,58,0))
+    it("shouldn't update totalTime if audible",async  () => { 
         let todayRecord = {
             "test.com": { audible: true, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, },
             "test2.com": { audible: false, focused: false, initDate: null, tabId: [2], totalTime: 0, },
         }
-        vi.setSystemTime(new Date(2024,4,21,10,2,0))
+        vi.setSystemTime(new Date(2024,4,21,10,0,0))
         global.chrome.tabs.query.mockResolvedValueOnce([{url : 'https://test.com', audible : true}])
         let expectedTodayRecord = {
             "test.com": { audible: true, focused: false, initDate: todayRecord["test.com"].initDate, tabId: [1], totalTime: 0, },
             "test2.com": { audible: false, focused: true, initDate: Date.now(), tabId: [2], totalTime: 0, }
         }
-        const result = bookkeeping.handleChangeFocus(todayRecord, 'test2.com')
+        const result = await bookkeeping.handleChangeFocus(todayRecord, 'test2.com')
         expect(result).toStrictEqual(expectedTodayRecord)
     })
 })

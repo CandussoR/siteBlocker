@@ -1,6 +1,7 @@
 import { bookkeeping } from "./bookkeeping.js";
 import { getRestrictedSites, isRestricted } from './restrictionsHandler.js'
 
+// Fires when the active tab in a window changes.
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
     let tab = await chrome.tabs.get(activeInfo.tabId)
     console.log("changes on this tab")
@@ -14,6 +15,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     bookkeeping('change-focus', activeInfo.tabId, host)
   })
   
+  // Fires if window is focused or not
   chrome.windows.onFocusChanged.addListener(async (windowId) => {
     if (windowId === -1) {
       bookkeeping('no-focus')
