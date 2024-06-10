@@ -222,4 +222,27 @@ describe('totalTime', () => {
     let result = await isRestricted('test.com', mockSites)
     expect(result).toBe(false)
   })
+
+  it('should be restricted if group is restricted and site has no restriction', async () => {
+    let mockSites = [{name : "test.com", group : "Test"}]
+    let mockGroups = { groups : [{name : 'Test', restrictions : {'timeSlot' : [{ 'days' : ['Tuesday'], 'time' : ['09:00:00', '11:00:00']}] } }] }
+    global.chrome.alarms.getAll.mockResolvedValueOnce([])
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockGroups)
+    let result = await isRestricted('test.com', mockSites)
+    expect(result).toBe(true)
+  })
+
+  it('should not be restricted if group is restricted  and site has no restriction', async () => {
+    let sites = [{name : "test.com", group : "Test"}]
+    let mockSites = { sites : [ {name : "test.com", group : "Test"} ] }
+    let mockGroups = { groups : [{name : 'Test', restrictions : {'consecutiveTime' : [{ 'days' : ['Tuesday'], 'consecutiveTime' : 60, 'pause' : 60}] } }] }
+    let mockRecords = { records : { '2024-05-21' : { 'test.com' : { consecutiveTime : 0 } } } }
+    global.chrome.alarms.getAll.mockResolvedValueOnce([])
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockGroups)
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockSites)
+    let result = await isRestricted('test.com', sites)
+    expect(result).toBe(false)
+  })
+
  })

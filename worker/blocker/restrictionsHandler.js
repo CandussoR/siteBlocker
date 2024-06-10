@@ -76,14 +76,13 @@ async function isGroupRestricted(host, groupRestrictions, siteRestrictions) {
     }
 
     if (!restricted && groupRestrictions.totalTime) {
-        console.log("not retricted and groupRestrictions.totalTime", groupRestrictions.totalTime)
         let sR = siteRestrictions ? siteRestrictions.totalTime : null
         restricted = await isGroupRestrictedByTotalTime(host, groupRestrictions.totalTime, sR)
     }
 
     if (!restricted && groupRestrictions.consecutiveTime) {
       let sR = siteRestrictions ? siteRestrictions.consecutiveTime : null
-      restriction = await isGroupRestrictedByConsecutiveTime(host, groupRestrictions.consecutiveTime, sR)
+      restricted = await isGroupRestrictedByConsecutiveTime(host, groupRestrictions.consecutiveTime, sR)
     }
 
     return restricted
@@ -92,8 +91,8 @@ async function isGroupRestricted(host, groupRestrictions, siteRestrictions) {
 
 function isGroupRestrictedByTimeSlot(groupRestriction, siteRestriction) {
   let result = checkSlots(groupRestriction);
-  if (!result && checkSite && siteRestriction && siteRestriction !== groupRestriction) {
-    result = checkSlots( siteRestriction);
+  if (!result && siteRestriction && siteRestriction !== groupRestriction) {
+    result = checkSlots(siteRestriction);
   }
   return result
 }
@@ -105,8 +104,6 @@ export async function isGroupRestrictedByTotalTime(host, groupRestriction, siteR
     let timeLeft = -1
     let { records = {} } = await chrome.storage.local.get('records') ;
     let todayRecord = records[date]
-
-    // console.log("groupRestriction in isRestrictedByTotalTime", groupRestriction)
 
     for (let i = 0; i < groupRestriction.length; i++) {
         console.log("groupRestriction[i]", groupRestriction[i], groupRestriction[i].days.includes(currentDay))
@@ -137,8 +134,6 @@ export async function isGroupRestrictedByTotalTime(host, groupRestriction, siteR
 }
 
 export async function isGroupRestrictedByConsecutiveTime(host, groupRestriction, siteRestriction) {
-  // console.log("entering isRestrictedByConsecutiveTime", host, groupRestriction, siteRestriction)
-
   const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
   let date = new Date().toISOString().split('T')[0] ;
   let siteTimeLeft = Infinity
