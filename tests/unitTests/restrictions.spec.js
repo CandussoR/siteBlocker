@@ -213,4 +213,13 @@ describe('totalTime', () => {
     expect(result).toBe(true)
   }
 )
+
+  it('should be restricted if group is restricted and site has no restriction', async () => {
+    let mockSites = [{name : "test.com", group : "Test"}]
+    let mockGroups = { groups : [{name : 'Test', restrictions : {'days' : ['Tuesday'], 'time' : ['09:00:00', '11:00:00']}}] }
+    global.chrome.alarms.getAll.mockResolvedValueOnce([])
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockGroups)
+    let result = await isRestricted('test.com', mockSites)
+    expect(result).toBe(false)
+  })
  })

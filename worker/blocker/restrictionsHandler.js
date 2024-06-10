@@ -14,16 +14,21 @@ export async function isRestricted(host, sites) {
     let siteIndex = sitesName.findIndex(x => x === host)
     let siteRestrictions = sites[siteIndex].restrictions
     let siteGroup = sites[siteIndex].group
+    console.log(siteRestrictions, siteGroup)
 
     let alarms = await chrome.alarms.getAll()
-    console.log("alarms name contains group ?", siteGroup, alarms.map(x => x.name), alarms.map(x => x.name.includes(siteGroup) && x.name.includes('-end')))
-    alarms = alarms.filter(x => (x.name.includes(siteGroup) && x.name.includes('-end')) || (x.name.includes(host) && x.name.includes('-end')))
-    console.log("alarms after filter", alarms, alarms.length)
-    if (alarms.length !== 0) return true;
+    if (alarms) {
+      console.log("alarms name contains group ?", siteGroup, alarms.map(x => x.name), alarms.map(x => x.name.includes(siteGroup) && x.name.includes('-end')))
+      alarms = alarms.filter(x => (x.name.includes(siteGroup) && x.name.includes('-end')) || (x.name.includes(host) && x.name.includes('-end')))
+      console.log("alarms after filter", alarms, alarms.length)
+      if (alarms.length !== 0) return true;
+    }
 
     if (siteGroup) {
+      console.log("siteGroup", siteGroup)
         let { groups = [] } = await chrome.storage.local.get('groups')
         let groupIndex = groups.findIndex(g => g.name === siteGroup)
+        console.log("groupIndex", groupIndex)
         let groupRestrictions = groups[groupIndex].restrictions
 
         if (groupRestrictions) {
@@ -62,19 +67,23 @@ export async function isRestricted(host, sites) {
 
 async function isGroupRestricted(host, groupRestrictions, siteRestrictions) {
     let restricted = false;
-    console.log(groupRestrictions)
+
+
 
     if (groupRestrictions.timeSlot) {
-        restricted = isGroupRestrictedByTimeSlot(groupRestrictions.timeSlot,siteRestrictions.timeSlot);
+      let sR = siteRestrictions ? siteRestrictions.timeSlot : null
+      restricted = isGroupRestrictedByTimeSlot(groupRestrictions.timeSlot, sR);
     }
 
     if (!restricted && groupRestrictions.totalTime) {
         console.log("not retricted and groupRestrictions.totalTime", groupRestrictions.totalTime)
-        restricted = await isGroupRestrictedByTotalTime(host, groupRestrictions.totalTime, siteRestrictions.totalTime)
+        let sR = siteRestrictions ? siteRestrictions.totalTime : null
+        restricted = await isGroupRestrictedByTotalTime(host, groupRestrictions.totalTime, sR)
     }
 
     if (!restricted && groupRestrictions.consecutiveTime) {
-      restriction = await isGroupRestrictedByConsecutiveTime(host, groupRestrictions.consecutiveTime, siteRestrictions.consecutiveTime)
+      let sR = siteRestrictions ? siteRestrictions.consecutiveTime : null
+      restriction = await isGroupRestrictedByConsecutiveTime(host, groupRestrictions.consecutiveTime, sR)
     }
 
     return restricted
@@ -83,7 +92,7 @@ async function isGroupRestricted(host, groupRestrictions, siteRestrictions) {
 
 function isGroupRestrictedByTimeSlot(groupRestriction, siteRestriction) {
   let result = checkSlots(groupRestriction);
-  if (!result && checkSite && siteRestriction !== groupRestriction) {
+  if (!result && checkSite && siteRestriction && siteRestriction !== groupRestriction) {
     result = checkSlots( siteRestriction);
   }
   return result
