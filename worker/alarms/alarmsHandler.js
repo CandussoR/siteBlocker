@@ -1,4 +1,4 @@
-import { getTodayRecord } from "../blocker/bookkeeping";
+import {getTodayRecord} from '../blocker/bookkeeping.js'
 
 handleAlarms()
 
@@ -10,7 +10,7 @@ async function handleAlarms() {
 
 
 async function alarmsAreSet() {
-    let { alarms = [] } = await chrome.alarms.getAll()
+    let alarms = await chrome.alarms.getAll()
     return alarms.length !== 0;
 }
 
@@ -177,20 +177,22 @@ function createTimeSlotAlarms(sites) {
         let s = sites[i]
         console.log(s, s.name)
 
-        if (!('timeSlot' in s.restrictions)) { break ; }
+        if (!('timeSlot' in s.restrictions)) { continue ; }
 
         console.assert(Array.isArray(s.restrictions.timeSlot), JSON.stringify(s.restrictions.timeSlot))
-        // Should always have only one item with the day for one restriction
         let timeSlots = s.restrictions.timeSlot.find(x => x.days.includes(currentDay)).time
+        let filteredTimeSlots = timeSlots.find(x => x[0] < currentTime && currentTime < x[1])
+         
+        if (filteredTimeSlots.length === 0) { continue; }
 
         let index = -1
 
-        if (timeSlots[0] > currentTime) { index = 0 }
-        else if (timeSlots[1] > currentTime || timeSlots[1] === '00:00') { index = 1 }
+        if (filteredTimeSlots[0] > currentTime) { index = 0 }
+        else if (filteredTimeSlots[1] > currentTime || filteredTimeSlots[1] === '00:00') { index = 1 }
 
         if (index === -1) { continue; }
 
-        let [hours, minutes] = timeSlots[index].split(':')
+        let [hours, minutes] = filteredTimeSlots[index].split(':')
 
         let futureDate = new Date()
         futureDate.setHours(hours)
@@ -199,7 +201,7 @@ function createTimeSlotAlarms(sites) {
 
         let delay = (futureDate - Date.now()) / 1000 / 60
 
-        console.assert(Number.isInteger(delay), futureDate, futureDate - Date.now())
+        console.assert(Number.isInteger(delay) === true, futureDate, futureDate - Date.now())
 
         if (index === 1) {
             chrome.alarms.create(`${s.name}-time-slot-restriction-end`, {delayInMinutes : delay})

@@ -38,7 +38,7 @@ describe('createAlarms', () => {
                 {
                     name: 'Test', 
                     restrictions : {
-                                'timeSlot': [{'days' : ['Tuesday'], 'time': ['09:00', '11:00']}],
+                                'timeSlot': [{'days' : ['Tuesday'], 'time': [['09:00', '11:00']]}],
                                 'consecutiveTime' : [{'days': ['Saturday'], 'consecutiveTime': 60, 'pause': 60}]
                             }
                 }
@@ -83,7 +83,7 @@ describe('handleStorageChange', () => {
 
     it('should adapt to a modification of time slot when restriction has changed', async () => {
         let oldSites = [ { name: 'test.com', group: 'Test', restrictions : null } ]
-        let newSites = [ { name: 'test.com', group: 'Test', restrictions : {'timeSlot' : [{'days' : ['Tuesday'], 'time': ['09:00', '11:00'] } ] } } ]
+        let newSites = [ { name: 'test.com', group: 'Test', restrictions : {'timeSlot' : [{'days' : ['Tuesday'], 'time': [['09:00', '11:00']] } ] } } ]
         let changes = 
             { sites : 
                 {
