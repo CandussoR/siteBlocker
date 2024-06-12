@@ -25,21 +25,21 @@ Under development.
  
 ## Currently
 ### Restrictions
-[x] Time Slot Restriction
-[x] Total Time Restriction
-[x] Time in a Row Restriction
-[] Customizable time of pause necessary before the time in a row gets reinitialized
+- [x] Time Slot Restriction
+- [x] Total Time Restriction
+- [x] Time in a Row Restriction
+- [ ] Customizable time of pause necessary before the time in a row gets reinitialized
 ### Service Worker
-[x] Management of the alarms to fire beginning or end of restriction
-[] Cleaning of the records to reduce the space taken by data
-[] Customizable number of days stored in data
-[] More precise system to calculate the total time per day
+- [x] Management of the alarms to fire beginning or end of restriction
+- [ ] Cleaning of the records to reduce the space taken by data
+- [ ] Customizable number of days stored in data
+- [ ] More precise system to calculate the total time per day
 ### Front
-[x] Front overall behavior through web components
-[] Shadow tree for cleaner HTML
-[] CSS and design stuff
-[] Side bar to navigate through the different pages of the extension
-[] Data visualisation page
+- [x] Front overall behavior through web components
+- [ ] Shadow tree for cleaner HTML
+- [ ] CSS and design stuff
+- [ ] Side bar to navigate through the different pages of the extension
+- [ ] Data visualisation page
 
 ## Use
 * If you'd wish to get a feel of the app, you can first clone this repo and add the extension in your browser by managing the extensions.
