@@ -1,12 +1,13 @@
 export async function setRecords(today) {
+
     let day = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date())
 
     let { records = {} } = await chrome.storage.local.get('records') ;
-    if (Object.keys(records).includes(today)) return ;
+    if (Object.keys(records).includes(today)) return records;
 
     let { sites = [] } = await chrome.storage.local.get('sites') ;
     let { groups = [] } = await chrome.storage.local.get('groups');
-    if (records.length === 0 && sites.length === 0) return ;
+    if (groups.length === 0 && sites.length === 0) return ;
     
     records[today] = {}
     for (let i=0 ; i<sites.length ; i++) {
@@ -14,8 +15,8 @@ export async function setRecords(today) {
 
         let group = groups.find(x => x.name === sites[i].group)
         let cT = undefined 
-        if (group.restrictions && 'consecutiveTime' in group.restrictions) cT = group.restriction.consecutiveTime
-        if (sites[i].restrictions && 'consecutiveTime' in sites[i].restrictions) cT = sites[i].restriction.consecutiveTime
+        if (group.restrictions && 'consecutiveTime' in group.restrictions) cT = group.restrictions.consecutiveTime
+        if (sites[i].restrictions && 'consecutiveTime' in sites[i].restrictions) cT = sites[i].restrictions.consecutiveTime
         if (cT && cT.find(x => x.days.includes(day))) {
             records[today][sites[i]].name.consecutiveTime = 0
             continue
@@ -23,6 +24,7 @@ export async function setRecords(today) {
     }
     
     await chrome.storage.local.set({records : records}) ;
+
     return records
 }
 
@@ -31,6 +33,8 @@ export async function cleanRecords(lastCleaned, records, todate) {
     
     let lastCleanIndex = keys.indexOf(lastCleaned)
     let beginAtIndex = ( !lastCleaned || lastCleanIndex === -1 ) ? 0 : lastCleanIndex + 1 ;
+    let dateToDelete = []
+
 
     for (let i = beginAtIndex ; i < keys.length ; i++) {
 
@@ -42,7 +46,11 @@ export async function cleanRecords(lastCleaned, records, todate) {
             if (recDate[site].totalTime === 0) delete recDate[site]
             else recDate[site] = recDate[site].totalTime
         }
+        
+        if (Object.keys(recDate).length === 0) dateToDelete.push(keys[i])
     }
+
+    dateToDelete.forEach(d => delete records[d])
 
     await chrome.storage.local.set({lastCleaned : todate}) ;
     await chrome.storage.local.set({records : records})

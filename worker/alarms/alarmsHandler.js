@@ -16,7 +16,6 @@ async function alarmsAreSet() {
 
 
 export async function createAlarms() {
-    console.log("creating alarms")
     let { groups = [] } = await chrome.storage.local.get('groups')
     let { sites = [] } = await chrome.storage.local.get('sites')
 
@@ -24,10 +23,12 @@ export async function createAlarms() {
     filtered.push(...groups.filter(x => ![null, undefined].includes(x.restrictions)))
     filtered.push(...sites.filter(x => ![null, undefined].includes(x.restrictions)))
 
-    createTimeSlotAlarms(filtered)
+    await createTimeSlotAlarms(filtered)
 }
 
-export async function handleStorageChange(changes,area) {    
+export async function handleStorageChange(changes,area) { 
+    if ( !('sites' in changes) || !('groups' in changes)) return; 
+       
     // In case a site has been added, it's added in records
     if (changes.sites && (changes.sites.newValue.length > changes.sites.oldValue.length)) {
         let date = new Date().toISOString().split('T')[0] ;
@@ -70,7 +71,7 @@ export async function handleStorageChange(changes,area) {
         }
     }
 
-    if (createAlarms) createTimeSlotAlarms(changes[key].newValue)
+    if (createAlarms) await createTimeSlotAlarms(changes[key].newValue)
 }
 
 export async function handleOnAlarm(alarm) {
@@ -89,7 +90,7 @@ export async function handleOnAlarm(alarm) {
         let { data = [] } = await chrome.storage.local.get(isGroup ? 'groups' : 'sites')
         data = data.filter(x => x.name === n)
         console.assert(Array.isArray(data) === true, "data is not an array")
-        createTimeSlotAlarms(data)  
+        await createTimeSlotAlarms(data)  
         return;
     }
 
@@ -168,7 +169,7 @@ async function redirectTabsRestrictedByAlarm(isGroup, tabs) {
 }
 
 
-function createTimeSlotAlarms(sites) {
+async function createTimeSlotAlarms(sites) {
 
     const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
     const currentTime = new Date().toLocaleTimeString('fr-FR')
@@ -180,10 +181,21 @@ function createTimeSlotAlarms(sites) {
         if (!('timeSlot' in s.restrictions)) { continue ; }
 
         console.assert(Array.isArray(s.restrictions.timeSlot), JSON.stringify(s.restrictions.timeSlot))
+
         let timeSlots = s.restrictions.timeSlot.find(x => x.days.includes(currentDay)).time
-        let filteredTimeSlots = timeSlots.find(x => x[0] < currentTime && currentTime < x[1])
-         
-        if (filteredTimeSlots.length === 0) { continue; }
+        let filteredTimeSlots = []
+        for (let j = 0; j < timeSlots.length ; j++) {
+            if (timeSlots[j][0] < currentTime && currentTime < timeSlots[j][1]) {
+                filteredTimeSlots = timeSlots[j] ;
+                break ;
+            }
+            else if (timeSlots[j][1] < currentTime && currentTime < timeSlots[j+1][0]) {
+                filteredTimeSlots = timeSlots[j+1]
+                break;
+            }
+        }
+        
+        if (!filteredTimeSlots || filteredTimeSlots.length === 0) { continue; }
 
         let index = -1
 
@@ -201,13 +213,13 @@ function createTimeSlotAlarms(sites) {
 
         let delay = (futureDate - Date.now()) / 1000 / 60
 
-        console.assert(Number.isInteger(delay) === true, futureDate, futureDate - Date.now())
+        // console.assert(typeof delay === 'number', futureDate, futureDate - Date.now())
 
         if (index === 1) {
-            chrome.alarms.create(`${s.name}-time-slot-restriction-end`, {delayInMinutes : delay})
+            await chrome.alarms.create(`${s.name}-time-slot-restriction-end`, {delayInMinutes : delay})
             break;
         } else if (index === 0) {
-            chrome.alarms.create(`${s.name}-time-slot-restriction-begin`, {delayInMinutes : delay})
+            await chrome.alarms.create(`${s.name}-time-slot-restriction-begin`, {delayInMinutes : delay})
             break;
         }
     }

@@ -117,8 +117,11 @@ describe('sth', () => {
 
     it('should clean the right data', async () => {
         let fakeRecordInput = {
-          "2024-05-19": {
+          "2024-05-18": {
             "test3.com": 600,
+          },
+          "2024-05-19": {
+            "test.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0 }
           },
           "2024-05-20": {
             "test.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 60, },
@@ -131,7 +134,7 @@ describe('sth', () => {
         }; 
         let result = { 
             "records" : {
-                "2024-05-19": {
+                "2024-05-18": {
                 "test3.com": 600,
                 },
                 "2024-05-20": {
@@ -145,7 +148,7 @@ describe('sth', () => {
           } 
         }; 
         let today = new Date().toISOString().split('T')[0];
-        await cleanRecords('2024-05-19', fakeRecordInput, today)
+        await cleanRecords('2024-05-18', fakeRecordInput, today)
         expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(1, {lastCleaned : today})
         expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(2, result)
     }) 

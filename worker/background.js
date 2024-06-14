@@ -1,4 +1,5 @@
 import { template_sites } from './sites.js'
+import { setRecords, cleanRecords } from './settingRecord.js'
 
 chrome.runtime.onInstalled.addListener(async () => {
     let {sites} = await chrome.storage.local.get("sites")
@@ -11,15 +12,17 @@ chrome.runtime.onInstalled.addListener(async () => {
     }
 })
 
-import './blocker/blocker.js'
-import './alarms/alarmsEvents.js'
-import { setRecords, cleanRecords } from './settingRecord.js'
-
 chrome.runtime.onStartup.addListener( async () => {
     let today = new Date().toISOString().split('T')[0] ;
     let records = await setRecords(today);
+    if (!records) return;
     let {lastCleaned} = await chrome.storage.local.get('lastCleaned')
-    if (Object.keys(records) === 1 || lastCleaned === today) return;
+    console.log("lastCleaned", lastCleaned)
+    if (Object.keys(records).length === 1 || lastCleaned === today) return;
+    console.log("records must be cleaned")
     await cleanRecords(lastCleaned, records, today)
     }
 ) 
+
+import './blocker/blocker.js'
+import './alarms/alarmsEvents.js'
