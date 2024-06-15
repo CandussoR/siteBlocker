@@ -18,7 +18,7 @@ export async function setRecords(today) {
         if (group.restrictions && 'consecutiveTime' in group.restrictions) cT = group.restrictions.consecutiveTime
         if (sites[i].restrictions && 'consecutiveTime' in sites[i].restrictions) cT = sites[i].restrictions.consecutiveTime
         if (cT && cT.find(x => x.days.includes(day))) {
-            records[today][sites[i]].name.consecutiveTime = 0
+            records[today][sites[i].name].consecutiveTime = 0
             continue
         }
     }
