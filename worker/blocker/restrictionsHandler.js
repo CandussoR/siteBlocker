@@ -136,29 +136,41 @@ export async function isGroupRestrictedByTotalTime(host, groupRestriction, siteR
 export async function isGroupRestrictedByConsecutiveTime(host, groupRestriction, siteRestriction) {
   const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
   let date = new Date().toISOString().split('T')[0] ;
-  let siteTimeLeft = Infinity
+  let groupTimeLeft = -1
+  let siteTimeLeft = -1
 
   let { records = [] } = await chrome.storage.local.get('records') ;
   let todayRecord = records[date]
 
   let { sites = [] } = await chrome.storage.local.get('sites') ;
+  console.log("sites", sites, "host", host, "groupName", sites.find(x => x.name === host).group);
   let groupName = sites.find(x => x.name === host).group;
   let sitesOfGroup = sites.filter(x => x.group === groupName).map(x => x.name) ;
 
-  let todayGroupConsecutiveTime = groupRestriction.find(x => x.days.includes(currentDay)).consecutiveTime
-  let totalGroupTime = 0
-  sitesOfGroup.forEach(site => { totalGroupTime += todayRecord[site].consecutiveTime });
-  if (totalGroupTime >= todayGroupConsecutiveTime) return true;
-  let groupTimeLeft = todayGroupConsecutiveTime - totalGroupTime
+  let todayGroup = groupRestriction.find(x => x.days.includes(currentDay))
+  if ( todayGroup && 'consecutiveTime' in todayGroup) {
+    let totalGroupTime = 0
+    sitesOfGroup.forEach(site => { totalGroupTime += todayRecord[site].consecutiveTime });
+    if (totalGroupTime >= todayGroup.consecutiveTime) return true;
+    console.log("groupTimeLeft math", todayGroup.consecutiveTime, totalGroupTime)
+    groupTimeLeft = todayGroup.consecutiveTime - totalGroupTime
+    console.log("groupTimeLeft", groupTimeLeft)
+  }
 
   if (siteRestriction) {
+    console.log('there is siteRestriction', siteRestriction)
     siteTimeLeft = timeLeftBeforeRestriction('consecutiveTime', currentDay, todayRecord[host], siteRestriction)
     if (!siteTimeLeft) return true;
   }
 
-  if (groupTimeLeft < siteTimeLeft) {
+  console.log("siteTimeLeft", siteTimeLeft, "groupTimeLeft", groupTimeLeft, "host", host, groupTimeLeft <= siteTimeLeft)
+  if (siteTimeLeft === -1 && groupTimeLeft === -1) return false;
+
+  if (!siteTimeLeft || groupTimeLeft <= siteTimeLeft) {
+    console.log("setting alarm for group", groupName, groupTimeLeft)
     await chrome.alarms.create(`${groupName}-consecutive-time-restriction-begin`, {delayInMinutes : groupTimeLeft / 60})
-  } else {
+  } else if (!groupTimeLeft || siteTimeLeft < groupTimeLeft) {
+    console.log("setting alarm for site", siteTimeLeft)
     await chrome.alarms.create(`${host}-consecutive-time-restriction-begin`, {delayInMinutes : siteTimeLeft / 60})
   }
 
@@ -169,10 +181,16 @@ export async function isGroupRestrictedByConsecutiveTime(host, groupRestriction,
 function timeLeftBeforeRestriction(restrictionKey, currentDay, hostRecord, restriction) {
   console.log("received in timeLeftBeforeRestriction", restriction, Array.isArray(restriction))
     let timeLeft = 0
-    let todayCt = restriction.find(x => x.days.includes(currentDay))[restrictionKey]
-    if (todayCt > hostRecord[restrictionKey]) {
-      timeLeft = todayCt - hostRecord[restrictionKey]
+    let todayCt = restriction.find(x => x.days.includes(currentDay))
+    console.log("todayCt", todayCt)
+    if (!todayCt || !todayCt[restrictionKey]) return -1;
+
+    console.log("todayCt[restrictionKey]", todayCt[restrictionKey], "hostRecord[restrictionKey]", hostRecord[restrictionKey])
+    if (todayCt[restrictionKey] > hostRecord[restrictionKey]) {
+      timeLeft = todayCt[restrictionKey] - hostRecord[restrictionKey]
     }
+
+    console.log("returning from timeLeftBeforeRestriction", timeLeft)
     return timeLeft
 }
 
