@@ -280,4 +280,28 @@ describe('totalTime', () => {
     let result = await isRestricted('test.com', sites)
     expect(result).toBe(false)
   })
+
+  it('should create an alarm when site has a consecutive time set for the day', async () => {
+    let mockSites = { sites : [ {name : "test.com", restrictions : {'consecutiveTime' : [{ 'days' : ['Tuesday'], 'consecutiveTime' : 60, 'pause' : 60}] }} ] }
+    let mockRecords = { records : { '2024-05-21' : { 'test.com' : { consecutiveTime : 0 } } } }
+    global.chrome.alarms.getAll.mockResolvedValueOnce([])
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockSites)
+    let result = await isRestricted('test.com', mockSites.sites)
+    expect(global.chrome.alarms.create).toBeCalledWith('test.com-consecutive-time-restriction-begin', {delayInMinutes : 1})
+    expect(result).toBe(false)
+  })
+
+  it('should create an alarm for the group if it has a consecutive time set for the day', async () => {
+    let mockSites = { sites : [ {name : "test.com", group : 'Test', restrictions : {'consecutiveTime' : [{ 'days' : ['Tuesday'], 'consecutiveTime' : 60, 'pause' : 60}] }} ] }
+    let mockGroups = { groups : [{name : 'Test', restrictions : {'consecutiveTime' : [{ 'days' : ['Tuesday'], 'consecutiveTime' : 60, 'pause' : 60}] } }] }
+    let mockRecords = { records : { '2024-05-21' : { 'test.com' : { consecutiveTime : 0 } } } }
+    global.chrome.alarms.getAll.mockResolvedValueOnce([])
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockGroups)
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
+    global.chrome.storage.local.get.mockResolvedValueOnce(mockSites)
+    let result = await isRestricted('test.com', mockSites.sites)
+    expect(global.chrome.alarms.create).toBeCalledWith('Test-consecutive-time-restriction-begin', {delayInMinutes : 1})
+    expect(result).toBe(false)
+  })
  })
