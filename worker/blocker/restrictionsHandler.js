@@ -10,22 +10,22 @@ export async function getRestrictedSites() {
 export async function isRestricted(host, sites) {
     // check for alarms.
     const sitesName = sites.map(x => x.name)
-
+    const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
     let siteIndex = sitesName.findIndex(x => x === host)
     let siteRestrictions = sites[siteIndex].restrictions
     let siteGroup = sites[siteIndex].group
-    console.log(siteRestrictions, siteGroup)
+    // console.log("host", host, "sites", sites, "siteIndex", siteIndex, "sites[siteIndex]", sites[siteIndex], "siteRestrictions", siteRestrictions, "siteGroup", siteGroup)
 
     let alarms = await chrome.alarms.getAll()
-    if (alarms) {
-      console.log("alarms name contains group ?", siteGroup, alarms.map(x => x.name), alarms.map(x => x.name.includes(siteGroup) && x.name.includes('-end')))
+    if (alarms.length !== 0) {
+      // console.log("alarms name contains group ?", siteGroup, alarms.map(x => x.name), alarms.map(x => x.name.includes(siteGroup) && x.name.includes('-end')))
       alarms = alarms.filter(x => (x.name.includes(siteGroup) && x.name.includes('-end')) || (x.name.includes(host) && x.name.includes('-end')))
-      console.log("alarms after filter", alarms, alarms.length)
+      // console.log("alarms after filter", alarms, alarms.length)
       if (alarms.length !== 0) return true;
     }
 
     if (siteGroup) {
-      console.log("siteGroup", siteGroup)
+      // console.log("siteGroup", siteGroup)
         let { groups = [] } = await chrome.storage.local.get('groups')
         let groupIndex = groups.findIndex(g => g.name === siteGroup)
         console.log("groupIndex", groupIndex)
@@ -53,7 +53,7 @@ export async function isRestricted(host, sites) {
     }
 
     if (siteRestrictions && siteRestrictions.consecutiveTime) {
-        let timeLeft = timeLeftBeforeRestriction('consecutiveTime', currentDay, todayRecord[host], siteRestrictions.consecutiveTime)
+      let timeLeft = timeLeftBeforeRestriction('consecutiveTime', currentDay, todayRecord[host], siteRestrictions.consecutiveTime)
         if (timeLeft) {
           await chrome.alarms.create(`${host}-consecutive-time-restriction-begin`, {delayInMinutes : timeLeft/60})
         } else {
@@ -67,8 +67,6 @@ export async function isRestricted(host, sites) {
 
 async function isGroupRestricted(host, groupRestrictions, siteRestrictions) {
     let restricted = false;
-
-
 
     if (groupRestrictions.timeSlot) {
       let sR = siteRestrictions ? siteRestrictions.timeSlot : null
@@ -136,29 +134,41 @@ export async function isGroupRestrictedByTotalTime(host, groupRestriction, siteR
 export async function isGroupRestrictedByConsecutiveTime(host, groupRestriction, siteRestriction) {
   const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
   let date = new Date().toISOString().split('T')[0] ;
-  let siteTimeLeft = Infinity
+  let groupTimeLeft = -1
+  let siteTimeLeft = -1
 
   let { records = [] } = await chrome.storage.local.get('records') ;
   let todayRecord = records[date]
 
   let { sites = [] } = await chrome.storage.local.get('sites') ;
+  console.log("sites", sites, "host", host, "groupName", sites.find(x => x.name === host).group);
   let groupName = sites.find(x => x.name === host).group;
   let sitesOfGroup = sites.filter(x => x.group === groupName).map(x => x.name) ;
 
-  let todayGroupConsecutiveTime = groupRestriction.find(x => x.days.includes(currentDay)).consecutiveTime
-  let totalGroupTime = 0
-  sitesOfGroup.forEach(site => { totalGroupTime += todayRecord[site].consecutiveTime });
-  if (totalGroupTime >= todayGroupConsecutiveTime) return true;
-  let groupTimeLeft = todayGroupConsecutiveTime - totalGroupTime
+  let todayGroup = groupRestriction.find(x => x.days.includes(currentDay))
+  if ( todayGroup && 'consecutiveTime' in todayGroup) {
+    let totalGroupTime = 0
+    sitesOfGroup.forEach(site => { totalGroupTime += todayRecord[site].consecutiveTime });
+    if (totalGroupTime >= todayGroup.consecutiveTime) return true;
+    console.log("groupTimeLeft math", todayGroup.consecutiveTime, totalGroupTime)
+    groupTimeLeft = todayGroup.consecutiveTime - totalGroupTime
+    console.log("groupTimeLeft", groupTimeLeft)
+  }
 
   if (siteRestriction) {
+    console.log('there is siteRestriction', siteRestriction)
     siteTimeLeft = timeLeftBeforeRestriction('consecutiveTime', currentDay, todayRecord[host], siteRestriction)
     if (!siteTimeLeft) return true;
   }
 
-  if (groupTimeLeft < siteTimeLeft) {
+  console.log("siteTimeLeft", siteTimeLeft, "groupTimeLeft", groupTimeLeft, "host", host, groupTimeLeft <= siteTimeLeft)
+  if (siteTimeLeft === -1 && groupTimeLeft === -1) return false;
+
+  if (!siteTimeLeft || groupTimeLeft <= siteTimeLeft) {
+    console.log("setting alarm for group", groupName, groupTimeLeft)
     await chrome.alarms.create(`${groupName}-consecutive-time-restriction-begin`, {delayInMinutes : groupTimeLeft / 60})
-  } else {
+  } else if (!groupTimeLeft || siteTimeLeft < groupTimeLeft) {
+    console.log("setting alarm for site", siteTimeLeft)
     await chrome.alarms.create(`${host}-consecutive-time-restriction-begin`, {delayInMinutes : siteTimeLeft / 60})
   }
 
@@ -167,12 +177,19 @@ export async function isGroupRestrictedByConsecutiveTime(host, groupRestriction,
 
 
 function timeLeftBeforeRestriction(restrictionKey, currentDay, hostRecord, restriction) {
+  console.log("entered timeLeftBeforeRestriction")
   console.log("received in timeLeftBeforeRestriction", restriction, Array.isArray(restriction))
     let timeLeft = 0
-    let todayCt = restriction.find(x => x.days.includes(currentDay))[restrictionKey]
-    if (todayCt > hostRecord[restrictionKey]) {
-      timeLeft = todayCt - hostRecord[restrictionKey]
+    let todayCt = restriction.find(x => x.days.includes(currentDay))
+    console.log("todayCt", todayCt)
+    if (!todayCt || !todayCt[restrictionKey]) return -1;
+
+    console.log("todayCt[restrictionKey]", todayCt[restrictionKey], "hostRecord[restrictionKey]", hostRecord[restrictionKey])
+    if (todayCt[restrictionKey] > hostRecord[restrictionKey]) {
+      timeLeft = todayCt[restrictionKey] - hostRecord[restrictionKey]
     }
+
+    console.log("returning from timeLeftBeforeRestriction", timeLeft)
     return timeLeft
 }
 
