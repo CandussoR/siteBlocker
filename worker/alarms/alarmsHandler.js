@@ -1,3 +1,4 @@
+import { bookkeepingQueue } from '../blocker/blocker.js';
 import {getTodayRecord} from '../blocker/bookkeeping.js'
 
 handleAlarms()
@@ -27,11 +28,17 @@ export async function createAlarms() {
 }
 
 export async function handleStorageChange(changes,area) { 
-    if ( !('sites' in changes) || !('groups' in changes)) return; 
-       
+    if ('busy' in changes && changes.busy.newValue === false && changes.busy.oldValue !== false) {
+        console.log("not busy anymore")
+        bookkeepingQueue.dequeue()
+    }
+
+    if ( !('sites' in changes || 'groups' in changes) ) return; 
+    
+    let date = new Date().toISOString().split('T')[0] ;
+    
     // In case a site has been added, it's added in records
     if (changes.sites && (changes.sites.newValue.length > changes.sites.oldValue.length)) {
-        let date = new Date().toISOString().split('T')[0] ;
         let { records = [] } = await chrome.storage.local.get('records')
         let todayRecord = records[date]
         for (let site of changes.sites.newValue) {
@@ -46,6 +53,8 @@ export async function handleStorageChange(changes,area) {
     // Works for both groups and sites.
     let key = Object.keys(changes)[0]
     let createAlarms = false
+    let { records = {} } = await chrome.storage.local.get('records')
+    let setRecords = false
 
     for (let i = 0; i < changes[key].newValue.length ; i++) {
 
@@ -54,25 +63,30 @@ export async function handleStorageChange(changes,area) {
 
         if (newValueItem.restrictions === oldValueItem.restrictions) {
             continue ;
-        } else if ('consecutiveTime' in newValueItem.restrictions && !('consecutiveTime' in oldValueItem.restrictions)) {
-            let { records = {} } = await chrome.storage.local.get('records')
+        } else if ('consecutiveTime' in newValueItem.restrictions 
+            && 
+            ( !('consecutiveTime' in oldValueItem.restrictions) 
+                || (newValueItem.restrictions.consecutiveTime !== oldValueItem.restrictions.consecutiveTime) 
+            )) {
             let todayRecord = records[date] 
             todayRecord[ newValueItem.name ].consecutiveTime = 0
-            await chrome.storage.local.set({ records : records })
+            if (!setRecords) setRecords = true
         } else if (
             ('timeSlot' in newValueItem.restrictions && (!oldValueItem.restrictions || !('timeSlot' in oldValueItem.restrictions)) 
             || 
             ('timeSlot' in newValueItem.restrictions && (newValueItem.restrictions.timeSlot !== oldValueItem.restrictions.timeSlot)))
-            ) {
+        ) {
             createAlarms = true
             let alarms = await chrome.alarms.getAll()
             alarms = alarms.filter(x => x.name.includes(`${newValueItem.name}-time-slot`))
             for (let a of alarms) { await chrome.alarms.clear(a.name) }
         }
     }
+    
+    if (setRecords) await chrome.storage.local.set({ records : records })
 
     if (createAlarms) await createTimeSlotAlarms(changes[key].newValue)
-}
+    }
 
 export async function handleOnAlarm(alarm) {
     let tabs = await chrome.tabs.query({})
@@ -80,7 +94,7 @@ export async function handleOnAlarm(alarm) {
     let isGroup = (n.indexOf('.') === -1)
 
     if (alarm.name.includes('-consecutive-time')) {
-        handleConsecutiveTimeAlarm(alarm.name);
+        await handleConsecutiveTimeAlarm(alarm.name);
         return;
     }
 
@@ -103,7 +117,7 @@ export async function handleOnAlarm(alarm) {
 async function handleConsecutiveTimeAlarm(name) {
     let n = name.split('-').shift()
 
-    if ('check' in name) {
+    if (name.includes('-check')) {
         // 2 minutes have passed since site has been left, putting it into totalTime and resetting
         let { records = [] } = await chrome.storage.local.get('records')
         let todayRecord = getTodayRecord(records)
@@ -114,7 +128,7 @@ async function handleConsecutiveTimeAlarm(name) {
         return;
     }
 
-    if ('-end' in name) {
+    if (name.includes('-end')) {
         let { records = [] } = await chrome.storage.local.get('records')
         let todayRecord = getTodayRecord(records)
         todayRecord[n].consecutiveTime = 0
@@ -123,13 +137,34 @@ async function handleConsecutiveTimeAlarm(name) {
         return;
     }
 
-    let key = '.' in n ? 'sites' : 'groups'
+    // beginning of restriction, either site or group has the restriction
+    let key = n.includes('.') ? 'sites' : 'groups'
     try {
-        let {data = []} = await chrome.storage.local.get(key)
-        let siteRestriction = data.sites.filter(x => x.name === n).map(x => x.restrictions.consecutiveTime)
+        console.log("key", key)
+        console.log(await chrome.storage.local.get(key), await chrome.storage.local.get('sites'))
+        let data = await chrome.storage.local.get(key)
+        data = data[key]
+        // let data = key === 'sites' ? await chrome.storage.local.get('sites') : await chrome.storage.local.get('groups')
+        console.log("data", data)
+        // let siteRestriction = data.filter(x => x.name === n).map(x => x.restrictions.consecutiveTime)
+        let item = data.find(x => x.name === n)
+        let restriction = item.restrictions
+        if (restriction && 'consecutiveTime' in restriction) {
+            restriction = restriction.consecutiveTime
+        } else {
+            let {groups = [] } = await chrome.storage.local.get('groups')
+            restriction = groups.find(x => x.name === item.group).restrictions.consecutiveTime
+        }
+        console.log("restriction", restriction)
+
         let currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date())
-        siteRestriction = siteRestriction.filter(x => x.days.includes(currentDay))
-        await chrome.alarms.create(`${n}-consecutive-time-restriction-end`, {delayInMinutes : siteRestriction.pause / 60})
+        restriction = restriction.find(x => x.days.includes(currentDay))
+        if (restriction) {
+            await chrome.alarms.create(`${n}-consecutive-time-restriction-end`, {delayInMinutes : siteRestriction.pause / 60})
+        } else {
+            await chrome.alarms.clear(alarm.name)
+            return;
+        }
 
         let tabs = await chrome.tabs.query({})
         // need to better check urls non empty
@@ -178,18 +213,21 @@ async function createTimeSlotAlarms(sites) {
         let s = sites[i]
         console.log(s, s.name)
 
-        if (!('timeSlot' in s.restrictions)) { continue ; }
+        if (!('timeSlot' in s.restrictions) || !s.restrictions) { continue ; }
 
         console.assert(Array.isArray(s.restrictions.timeSlot), JSON.stringify(s.restrictions.timeSlot))
 
-        let timeSlots = s.restrictions.timeSlot.find(x => x.days.includes(currentDay)).time
+        console.log("site restriction in alarms", s.restrictions.timeSlot.find(x => x.days.includes(currentDay)))
+        let todayRestriction = s.restrictions.timeSlot.find(x => x.days.includes(currentDay))
+        if (!todayRestriction) continue;
+        let timeSlots = todayRestriction.time
         let filteredTimeSlots = []
         for (let j = 0; j < timeSlots.length ; j++) {
             if (timeSlots[j][0] < currentTime && currentTime < timeSlots[j][1]) {
                 filteredTimeSlots = timeSlots[j] ;
                 break ;
             }
-            else if (timeSlots[j][1] < currentTime && currentTime < timeSlots[j+1][0]) {
+            else if (timeSlots[j+1] && timeSlots[j][1] < currentTime && currentTime < timeSlots[j+1][0]) {
                 filteredTimeSlots = timeSlots[j+1]
                 break;
             }

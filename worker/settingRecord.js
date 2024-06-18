@@ -32,7 +32,8 @@ export async function cleanRecords(lastCleaned, records, todate) {
     let keys = Object.keys(records) ;
     
     let lastCleanIndex = keys.indexOf(lastCleaned)
-    let beginAtIndex = ( !lastCleaned || lastCleanIndex === -1 ) ? 0 : lastCleanIndex + 1 ;
+    console.log("lastCleanIndex", lastCleanIndex)
+    let beginAtIndex = ( !lastCleaned || lastCleanIndex === -1 ) ? 0 : lastCleanIndex;
     let dateToDelete = []
 
 

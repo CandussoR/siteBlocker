@@ -1,5 +1,60 @@
-import { bookkeeping } from "./bookkeeping.js";
 import { getRestrictedSites, isRestricted } from './restrictionsHandler.js'
+import { bookkeeping } from './bookkeeping.js'
+
+class BookkeepingQueue {
+  constructor() {
+      console.log("initialising the Queue object")
+      this.queue = []
+      this.lastEvent = null
+  }
+
+  addToQueue(bookkeepingParams) {
+      if (this.lastEvent === 'no-focus' && bookkeepingParams.flag === 'no-focus') return;
+  
+      console.log("adding to queue")
+      this.queue.push(bookkeepingParams);
+      console.log("this is the bookkeeping queue :", bookkeepingQueue)
+  }
+
+  async dequeue() {
+      console.log("dequeueing")
+      // let { bookkeepingQueue = [] } = await chrome.storage.local.get('bookkeepingQueue')
+      // console.log("bookkeeping queue in deQueue", bookkeepingQueue)
+      if (this.queue.length === 0) return; 
+      
+      await chrome.storage.local.set({busy : true});
+
+      while (this.queue.length !== 0) {
+          let {flag, tabId, host} = this.queue.shift();
+          console.log("flag of dequeuing item is", flag)
+          this.lastEvent = flag;
+          if (this.lastEvent === "no-focus" && flag === "no-focus") continue;
+          // let remaining = bookkeepingQueue.length
+      // console.log("remaining", remaining, "bookkeepingQueue after shift", bookkeepingQueue)
+      // await chrome.storage.local.set({  bookkeepingQueue : bookkeepingQueue })
+          await bookkeeping(flag, tabId, host)
+    
+      // console.log(remaining ? `${remaining} is remaining` : 'no remaining!')
+      // if (remaining) dequeue()
+      }
+
+      console.log("done dequeueing! setting busy as false")
+      await chrome.storage.local.set({busy : false})
+    } 
+}
+
+export const bookkeepingQueue = new BookkeepingQueue()
+
+async function processOrEnqueue(flag, tabId = undefined, host = undefined) {
+  bookkeepingQueue.addToQueue({ flag : flag, tabId : tabId, host : host})
+
+  let {busy} = await chrome.storage.local.get('busy')
+
+  if (!busy && (bookkeepingQueue.queue.length > 0 || bookkeepingQueue.lastEvent === null)) {
+    bookkeepingQueue.dequeue({ flag : flag, tabId : tabId, host : host})
+    return;
+  }
+}
 
 // Fires when the active tab in a window changes.
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
@@ -9,16 +64,16 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     let restrictedSites = await getRestrictedSites();
     let host = new URL(tab.url).host
     if (!restrictedSites.map(x => x.name).includes(host)) {
-      bookkeeping('no-focus')
+      await processOrEnqueue('no-focus')
       return ;
     }
-    bookkeeping('change-focus', activeInfo.tabId, host)
+    await processOrEnqueue('change-focus', activeInfo.tabId, host)
   })
   
   // Fires if window is focused or not
   chrome.windows.onFocusChanged.addListener(async (windowId) => {
     if (windowId === -1) {
-      bookkeeping('no-focus')
+      await processOrEnqueue('no-focus')
     } else {
       let [tab] = await chrome.tabs.query({ active: true });
       console.log("refocused window on following tab", tab)
@@ -28,7 +83,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 
       let host = new URL(tab.url).host
       if (!restrictedSites.map(x => x.name).includes(host)) return ; 
-      bookkeeping('change-focus', tab.tabId, host)
+      await processOrEnqueue('change-focus', tab.tabId, host)
     }
   })
   
@@ -59,7 +114,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
       if (!restrictedSites.map(x => x.name).includes(host)) return ;
   
       if (await isRestricted(host, restrictedSites)) {
-        bookkeeping('close', tabId, host);
+        await processOrEnqueue('close', tabId, host);
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           if (message.ready) { sendResponse({url : url, host : host}) }
         });
@@ -76,15 +131,12 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
       }
   
       console.log("Okay, damn this never end, let me bookkeep that", new Date());
-      bookkeeping(flag, tabId, host);
+      await processOrEnqueue(flag, tabId, host);
   });
   
 
-  chrome.tabs.onRemoved.addListener((tabId, removeInfo) => { 
+  chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => { 
     console.log("tab has been removed")
     console.log(tabId, removeInfo)
-    bookkeeping('close', tabId)
+    await processOrEnqueue('close', tabId)
    })
-
-
-  

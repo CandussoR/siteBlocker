@@ -1,5 +1,7 @@
+
 import { template_sites } from './sites.js'
 import { setRecords, cleanRecords } from './settingRecord.js'
+
 
 chrome.runtime.onInstalled.addListener(async () => {
     let {sites} = await chrome.storage.local.get("sites")
@@ -13,14 +15,21 @@ chrome.runtime.onInstalled.addListener(async () => {
 })
 
 chrome.runtime.onStartup.addListener( async () => {
+    console.log("setting busy as false before cleanup") 
+    await chrome.storage.local.set({ busy : true })
     let today = new Date().toISOString().split('T')[0] ;
     let records = await setRecords(today);
-    if (!records) return;
+    if (!records) {
+        await chrome.storage.local.set({ busy : false })
+        return;
+    }
+
     let {lastCleaned} = await chrome.storage.local.get('lastCleaned')
     console.log("lastCleaned", lastCleaned)
     if (Object.keys(records).length === 1 || lastCleaned === today) return;
     console.log("records must be cleaned")
     await cleanRecords(lastCleaned, records, today)
+    await chrome.storage.local.set({busy : false})
     }
 ) 
 

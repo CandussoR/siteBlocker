@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { createAlarms, handleStorageChange } from '../../worker/alarms/alarmsHandler'
+import { createAlarms, handleOnAlarm, handleStorageChange } from '../../worker/alarms/alarmsHandler'
 
 
 global.chrome = {
@@ -13,6 +13,9 @@ global.chrome = {
         create: vi.fn(),
         getAll : vi.fn(),
         clear: vi.fn()
+    },
+    tabs : {
+        query : vi.fn()
     }
 }
 
@@ -131,5 +134,58 @@ describe('handleStorageChange', () => {
         expect(global.chrome.storage.local.set).toBeCalledTimes(0)
         expect(global.chrome.alarms.create).toHaveBeenCalledOnce()
         expect(global.chrome.alarms.create).toHaveBeenCalledWith('test.com-time-slot-restriction-end', {delayInMinutes : 60})
+    })
+
+    it('should add consecutiveTime in records if consecutiveTime has been extended to today', async () => {
+        let oldSites = [ { name: 'test.com', group: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Monday', 'Tuesday'], 'time': 60, 'pause' : 60 } ] } } ]
+        let newSites = [ { name: 'test.com', group: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Monday'], 'time': 60, 'pause' : 60 } ] } } ]
+        let changes = 
+            { sites : 
+                {
+                    newValue : newSites,
+                    oldValue : oldSites
+                }
+            }
+        let mockRecords = { records : { '2024-05-21' : { 'test.com' : { totalTime : 0} } } }
+        let mockRecordsResult = { records : { '2024-05-21' : { 'test.com' : { consecutiveTime : 0, totalTime : 0} } } }
+        global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
+        global.chrome.alarms.getAll.mockResolvedValueOnce([])
+
+        await handleStorageChange(changes, 'local')
+        expect(global.chrome.storage.local.set).toHaveBeenCalledOnce()
+        expect(global.chrome.storage.local.set).toBeCalledWith(mockRecordsResult)
+    })
+})
+
+describe('handleOnAlarm', () => {
+    beforeEach(() => {
+        // Reset mocks before each test
+        global.chrome.storage.local.get.mockReset()
+        global.chrome.storage.local.set.mockReset()
+        global.chrome.alarms.create.mockReset()
+        global.chrome.alarms.getAll.mockReset()
+        vi.useFakeTimers()
+        vi.setSystemTime(new Date(2024,4,21,10,0,0))
+      })
+      
+    afterEach(() => {
+        vi.useRealTimers()
+    })
+
+    it('should not throw an error, I guess', async () => {
+        let mockAlarm = { name : 'test.com-consecutive-time-restriction-begin', sth : Date.now() }
+        let mockSites = {
+            sites : 
+            [
+                {
+                    name: 'test.com', 
+                    group: 'Test',
+                    restrictions : { "consecutiveTime" : { days : ["Tuesday"], consecutiveTime : 60, pause : 60 } }
+                }
+            ]
+        }
+        global.chrome.tabs.query.mockResolvedValueOnce([{id : 1, url : 'https://test.com'}])
+        global.chrome.storage.local.get.mockResolvedValueOnce(mockSites)
+        await handleOnAlarm(mockAlarm)
     })
 })

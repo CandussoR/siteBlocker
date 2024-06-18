@@ -206,11 +206,44 @@ describe('cleanRecords', () => {
           } 
         }; 
         let today = new Date().toISOString().split('T')[0];
-        await cleanRecords('2024-05-18', fakeRecordInput, today)
+        await cleanRecords('2024-05-19', fakeRecordInput, today)
         expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(1, {lastCleaned : today})
         expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(2, result)
     }) 
 
-
+    it('should also clean record of lastCleaned date', async () => {
+        let fakeRecordInput = {
+          "2024-05-18": {
+            "test3.com": 600,
+          },
+          "2024-05-20": {
+            "test.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 60, },
+            "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 60 },
+          },
+          "2024-05-21": {
+            "test.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
+            "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0 },
+          },
+        }; 
+        let result = { 
+            "records" : {
+                "2024-05-18": {
+                "test3.com": 600,
+                },
+                "2024-05-20": {
+                "test.com": 60,
+                "test2.com": 60,
+                },
+                "2024-05-21": {
+                "test.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
+                "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0 },
+                },
+          } 
+        }; 
+        let today = new Date().toISOString().split('T')[0];
+        await cleanRecords('2024-05-20', fakeRecordInput, today)
+        expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(1, {lastCleaned : today})
+        expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(2, result)
+    })
 
 })
