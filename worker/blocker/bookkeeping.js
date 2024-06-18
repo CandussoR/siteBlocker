@@ -1,17 +1,15 @@
 export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     try {
-      console.log("In bookkeeping I have received", flag, tabId, host)
-
+      console.log("In bookkeeping I have received", flag, tabId, host) 
+ 
       let { records = [] } = await chrome.storage.local.get('records')
-      console.log("records in bookkeeping after request", records)
       let todayRecord = getTodayRecord(records)
-      console.log("todayRecord", todayRecord)
       if (!todayRecord) {
         console.error("No record has been set for today yet, a problem must have occured on startUp, aborting.")
         return;
       }
 
-      console.log("todayRecord, still", todayRecord, Object.keys(todayRecord))
+      console.log("todayRecord, before the switch case", todayRecord, Object.keys(todayRecord))
       switch (flag) {
         case ('audible-start'):
           todayRecord[host] = handleAudibleStart(todayRecord[host])
@@ -29,7 +27,6 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
           todayRecord = await handleNoFocus(todayRecord)
           break;
         case ('change-focus') :
-          console.log("just before entering handleChangeFocus", todayRecord)
           todayRecord = await handleChangeFocus(todayRecord, host)
           break;
       }
@@ -101,17 +98,13 @@ export async function handleClose(todayRecord, tabId) {
       return todayRecord;
     }
 
-    console.log("siteRecord", siteRecord, 'consecutiveTime' in siteRecord)
-    
     if ('consecutiveTime' in siteRecord) {
       siteRecord = await bookkeepConsecutiveTime(site, siteRecord)
     }
 
     siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000 );
     siteRecord.initDate = null;
-    console.log("after close", todayRecord)
   }
-
 
   return todayRecord
 }
@@ -120,13 +113,11 @@ export async function handleClose(todayRecord, tabId) {
 export function handleAudibleStart(siteRecord) {
   siteRecord.audible = true
   if (!siteRecord.initDate) siteRecord.initDate = Date.now()
-  console.warn("siteRecord after handleAudibleStart", siteRecord)
   return siteRecord
 }
 
 
 export async function handleAudibleEnd(site, siteRecord) {
-  console.log("handle audible end site and siteRecord", site, siteRecord)
   siteRecord.audible = false
 
   if (!siteRecord.focused && siteRecord.initDate) {
@@ -139,14 +130,12 @@ export async function handleAudibleEnd(site, siteRecord) {
     siteRecord.initDate = null;
   }
 
-  console.warn("siteRecord after handleAudibleEnd", siteRecord)
   return siteRecord
 }
 
 
 export async function handleNoFocus(todayRecord) {
     for (let site of Object.keys(todayRecord)) {
-      console.log(site, "audible", !todayRecord[site].audible)
       if (todayRecord[site].audible) {
         todayRecord[site].focused = false;
         continue;
@@ -163,7 +152,6 @@ export async function handleNoFocus(todayRecord) {
 
       todayRecord[site].focused = false;
     }
-    console.log("after no-focus", todayRecord)
     return todayRecord
 }
 
