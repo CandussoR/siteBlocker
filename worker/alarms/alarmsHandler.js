@@ -200,7 +200,7 @@ async function redirectTabsRestrictedByAlarm(isGroup, name, sites = undefined, t
         
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => { 
             console.log("sender is", sender)
-            if (message.ready) { sendResponse({url : tabs[i].url, host : host, tabId : tabs[i].id}) } 
+            if (message.ready && sender.tab.id === tabs[i].id) { sendResponse({url : tabs[i].url, host : host }) } 
         })
 
         chrome.tabs.update(tabs[i].id, {url : "redirected/redirected.html"})

@@ -10,16 +10,10 @@ class BookkeepingQueue {
 
   addToQueue(bookkeepingParams) {
       if (this.lastEvent === 'no-focus' && bookkeepingParams.flag === 'no-focus') return;
-  
-      console.log("adding to queue")
       this.queue.push(bookkeepingParams);
-      console.log("this is the bookkeeping queue :", bookkeepingQueue)
   }
 
   async dequeue() {
-      console.log("dequeueing")
-      // let { bookkeepingQueue = [] } = await chrome.storage.local.get('bookkeepingQueue')
-      // console.log("bookkeeping queue in deQueue", bookkeepingQueue)
       if (this.queue.length === 0) return; 
       
       await chrome.storage.local.set({busy : true});
@@ -29,16 +23,9 @@ class BookkeepingQueue {
           console.log("flag of dequeuing item is", flag)
           this.lastEvent = flag;
           if (this.lastEvent === "no-focus" && flag === "no-focus") continue;
-          // let remaining = bookkeepingQueue.length
-      // console.log("remaining", remaining, "bookkeepingQueue after shift", bookkeepingQueue)
-      // await chrome.storage.local.set({  bookkeepingQueue : bookkeepingQueue })
           await bookkeeping(flag, tabId, host)
-    
-      // console.log(remaining ? `${remaining} is remaining` : 'no remaining!')
-      // if (remaining) dequeue()
       }
 
-      console.log("done dequeueing! setting busy as false")
       await chrome.storage.local.set({busy : false})
     } 
 }
@@ -92,11 +79,9 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
       let changeUrl = changeInfo.pendingUrl || changeInfo.url;
       let changeAudible = 'audible' in changeInfo
       if (!changeUrl && !changeAudible) { 
-        console.log("useless event", changeInfo) 
         return ; 
       }
       if (["chrome://newtab/", "redirected/redirected.html"].includes(changeUrl)) {
-        console.log("don't care about those url")
         return ; 
       }
   
@@ -105,18 +90,16 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
       let restrictedSites = await getRestrictedSites();
       if (!restrictedSites) return ;
       
-      console.log("found sites");
       let url = changeUrl || tab.url;
       if (!url) return;
       
       let host = new URL(url).host;
-      console.log("got url", host);
       if (!restrictedSites.map(x => x.name).includes(host)) return ;
   
       if (await isRestricted(host, restrictedSites)) {
         await processOrEnqueue('close', tabId, host);
         chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-          if (message.ready) { sendResponse({url : url, host : host}) }
+          if (message.ready && sender.tab.id === tabId) { sendResponse({url : url, host : host}) }
         });
         chrome.tabs.update(tabId, {url : "redirected/redirected.html"});
         return;
