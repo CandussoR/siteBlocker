@@ -188,4 +188,9 @@ describe('handleOnAlarm', () => {
         global.chrome.storage.local.get.mockResolvedValueOnce(mockSites)
         await handleOnAlarm(mockAlarm)
     })
+
+
+    // a tester : 
+    //  - si nom d'alarme commence par groupe, est-ce que tous les domaines du groupe sont restreints ?
+    //  - est-ce que toutes les propriétés consecutiveTime des domaines du groupe dans records sont remises à 0 au end et au check ?
 })

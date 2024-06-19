@@ -89,6 +89,7 @@ export async function handleStorageChange(changes,area) {
     }
 
 export async function handleOnAlarm(alarm) {
+    console.log("Hey I'm handleOnAlarm and I received this", alarm)
     let tabs = await chrome.tabs.query({})
     let [n, r, type] = alarm.name.split('-')
     let isGroup = (n.indexOf('.') === -1)
@@ -116,37 +117,42 @@ export async function handleOnAlarm(alarm) {
 
 async function handleConsecutiveTimeAlarm(name) {
     let n = name.split('-').shift()
+    let storageKey = n.includes('.') ? 'sites' : 'groups'
+    let sitesOfGroup = storageKey === 'groups' ? await getSitesOfGroup(n) : undefined
 
     if (name.includes('-check')) {
         // 2 minutes have passed since site has been left, putting it into totalTime and resetting
         let { records = [] } = await chrome.storage.local.get('records')
         let todayRecord = getTodayRecord(records)
-        todayRecord[n].totalTime += todayRecord[n].consecutiveTime
-        todayRecord[n].consecutiveTime = 0
+        if (sitesOfGroup) {
+            sitesOfGroup.forEach(s => todayRecord[s].consecutiveTime = 0)
+        } else {
+            todayRecord[n].totalTime += todayRecord[n].consecutiveTime
+            todayRecord[n].consecutiveTime = 0
+        }
         await chrome.storage.local.set({records: records})
-        await chrome.alarms.clear(alarm.name)
+        await chrome.alarms.clear(name)
         return;
     }
-
+    
     if (name.includes('-end')) {
         let { records = [] } = await chrome.storage.local.get('records')
         let todayRecord = getTodayRecord(records)
-        todayRecord[n].consecutiveTime = 0
+        if (sitesOfGroup) {
+            sitesOfGroup.forEach(s => todayRecord[s].consecutiveTime = 0)
+        } else {
+            todayRecord[n].consecutiveTime = 0
+        }
         await chrome.storage.local.set({records : records})
-        await chrome.alarms.clear(alarm.name)
+        await chrome.alarms.clear(name)
         return;
     }
-
+    
     // beginning of restriction, either site or group has the restriction
-    let key = n.includes('.') ? 'sites' : 'groups'
     try {
-        console.log("key", key)
-        console.log(await chrome.storage.local.get(key), await chrome.storage.local.get('sites'))
-        let data = await chrome.storage.local.get(key)
-        data = data[key]
-        // let data = key === 'sites' ? await chrome.storage.local.get('sites') : await chrome.storage.local.get('groups')
-        console.log("data", data)
-        // let siteRestriction = data.filter(x => x.name === n).map(x => x.restrictions.consecutiveTime)
+        let data = await chrome.storage.local.get(storageKey)
+        data = data[storageKey]
+
         let item = data.find(x => x.name === n)
         let restriction = item.restrictions
         if (restriction && 'consecutiveTime' in restriction) {
@@ -155,37 +161,35 @@ async function handleConsecutiveTimeAlarm(name) {
             let {groups = [] } = await chrome.storage.local.get('groups')
             restriction = groups.find(x => x.name === item.group).restrictions.consecutiveTime
         }
-        console.log("restriction", restriction)
 
         let currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date())
         restriction = restriction.find(x => x.days.includes(currentDay))
         if (restriction) {
-            await chrome.alarms.create(`${n}-consecutive-time-restriction-end`, {delayInMinutes : siteRestriction.pause / 60})
+            console.log("about to set restriction end", restriction.pause, restriction.pause / 60)
+            await chrome.alarms.create(`${n}-consecutive-time-restriction-end`, {delayInMinutes : restriction.pause / 60})
         } else {
-            await chrome.alarms.clear(alarm.name)
+            await chrome.alarms.clear(name)
             return;
         }
 
         let tabs = await chrome.tabs.query({})
         // need to better check urls non empty
-        tabs = tabs.filter(t => t.url && new URL(t.url).host === n)
-        await redirectTabsRestrictedByAlarm(key === 'groups', tabs)
-        await chrome.alarms.clear(alarm.name)
+        if (sitesOfGroup) {
+            tabs = tabs.filter(t => t.url && sitesOfGroup.includes(new URL(t.url).host))
+        } else {
+            tabs = tabs.filter(t => t.url && new URL(t.url).host === n)
+        }
+        await redirectTabsRestrictedByAlarm(storageKey === 'groups', n, sitesOfGroup, tabs)
+        await chrome.alarms.clear(name)
 
     } catch (error) {
-        console.error(`Error when fetching ${key} from chrome storage local in handleConsecutiveAlarm : ${error}`)
+        console.error(`Error when fetching ${storageKey} from chrome storage local in handleConsecutiveAlarm : ${error}`)
     }    
 }
 
 
-async function redirectTabsRestrictedByAlarm(isGroup, tabs) {
-    let targets = []
-    if (isGroup) {
-        let { sites = [] } = await chrome.storage.local.get('sites')
-        targets = sites.filter(x => x.group === n).map(x => x.name)
-    } else {
-        targets.push(n)
-    }
+async function redirectTabsRestrictedByAlarm(isGroup, name, sites = undefined, tabs) {
+    let targets = isGroup ? sites : [ name ]
 
     for (let i = 0; i < tabs.length ; i++) {
         let host = new URL(tabs[i].url).host
@@ -263,3 +267,7 @@ async function createTimeSlotAlarms(sites) {
     }
 }
 
+async function getSitesOfGroup(name) {
+    let { sites = [] } = await chrome.storage.local.get('sites')
+    return sites.filter(x => x.group && x.group === name).map(x => x.name)
+}

@@ -255,16 +255,17 @@ describe('totalTime', () => {
     expect(result).toBe(true)
   })
 
-  it('should not be restricted if group is restricted  and site has no restriction', async () => {
+  it('should not be restricted but set an alarm if group is not restricted but has restriction and site has no restriction', async () => {
     let sites = [{name : "test.com", group : "Test"}]
     let mockSites = { sites : [ {name : "test.com", group : "Test"} ] }
     let mockGroups = { groups : [{name : 'Test', restrictions : {'consecutiveTime' : [{ 'days' : ['Tuesday'], 'consecutiveTime' : 60, 'pause' : 60}] } }] }
-    let mockRecords = { records : { '2024-05-21' : { 'test.com' : { consecutiveTime : 0 } } } }
+    let mockRecords = { records : { '2024-05-21' : { 'test.com' : { consecutiveTime : 0, totalTime : 0 } } } }
     global.chrome.alarms.getAll.mockResolvedValueOnce([])
     global.chrome.storage.local.get.mockResolvedValueOnce(mockGroups)
     global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
     global.chrome.storage.local.get.mockResolvedValueOnce(mockSites)
     let result = await isRestricted('test.com', sites)
+    expect(global.chrome.alarms.create).toHaveBeenCalledWith('Test-consecutive-time-restriction-begin', {delayInMinutes : 1})
     expect(result).toBe(false)
   })
 
