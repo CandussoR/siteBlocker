@@ -109,7 +109,8 @@ export async function handleOnAlarm(alarm) {
         return;
     }
 
-    await redirectTabsRestrictedByAlarm(isGroup, tabs)
+    let sitesOfGroup = isGroup ? await getSitesOfGroup(n) : undefined
+    await redirectTabsRestrictedByAlarm(isGroup, n, sitesOfGroup, tabs)
 
     chrome.alarms.clear(alarm.name)
 }
