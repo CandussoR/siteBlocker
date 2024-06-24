@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { createAlarms, handleOnAlarm, handleStorageChange } from '../../worker/alarms/alarmsHandler'
+import { createAlarms, getItemsWithNewRestrictions, handleOnAlarm, handleStorageChange } from '../../worker/alarms/alarmsHandler'
 
 
 global.chrome = {
@@ -12,7 +12,8 @@ global.chrome = {
     alarms: {
         create: vi.fn(),
         getAll : vi.fn(),
-        clear: vi.fn()
+        clear: vi.fn(),
+        clearAll : vi.fn().mockResolvedValue(true)
     },
     tabs : {
         query : vi.fn()
@@ -131,14 +132,14 @@ describe('handleStorageChange', () => {
         global.chrome.alarms.getAll.mockResolvedValueOnce([])
 
         await handleStorageChange(changes, 'local')
-        expect(global.chrome.storage.local.set).toBeCalledTimes(0)
+        expect(global.chrome.storage.local.set).toBeCalledWith(mockRecords)
         expect(global.chrome.alarms.create).toHaveBeenCalledOnce()
         expect(global.chrome.alarms.create).toHaveBeenCalledWith('test.com-time-slot-restriction-end', {delayInMinutes : 60})
     })
 
     it('should add consecutiveTime in records if consecutiveTime has been extended to today', async () => {
-        let oldSites = [ { name: 'test.com', group: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Monday', 'Tuesday'], 'time': 60, 'pause' : 60 } ] } } ]
-        let newSites = [ { name: 'test.com', group: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Monday'], 'time': 60, 'pause' : 60 } ] } } ]
+        let newSites = [ { name: 'test.com', group: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Monday', 'Tuesday'], 'consecutiveTime': 60, 'pause' : 60 } ] } } ]
+        let  oldSites = [ { name: 'test.com', group: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Monday'], 'consecutiveTime': 60, 'pause' : 60 } ] } } ]
         let changes = 
             { sites : 
                 {
@@ -155,7 +156,72 @@ describe('handleStorageChange', () => {
         expect(global.chrome.storage.local.set).toHaveBeenCalledOnce()
         expect(global.chrome.storage.local.set).toBeCalledWith(mockRecordsResult)
     })
+    
+    it('should not do anything if group without site has been added a restriction', async () => {
+        let oldGroup = [ { name: 'Test', restrictions : null } ]
+        let newGroup = [ { name: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Monday'], 'time': 60, 'pause' : 60 } ] } } ]
+        let changes = 
+            { groups : 
+                {
+                    newValue : newGroup,
+                    oldValue : oldGroup
+                }
+            }
+        let mockRecords = { records : { '2024-05-21' : { 'test.com' : { totalTime : 0} } } }
+        global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
+        global.chrome.storage.local.get.mockResolvedValueOnce({sites : []})
+        global.chrome.alarms.getAll.mockResolvedValueOnce([])
+
+        await handleStorageChange(changes, 'local')
+        expect(global.chrome.storage.local.set).toHaveBeenCalledWith(mockRecords)
+    })
+
+    it('should add consecutiveTime to sites of a group on adding consecutive time to group for today', async () => {
+        let oldGroup = [ { name: 'Test', restrictions : null } ]
+        let newGroup = [ { name: 'Test', restrictions : {'consecutiveTime' : [{'days' : ['Tuesday'], 'time': 60, 'pause' : 60 } ] } } ]
+        let changes = 
+            { groups : 
+                {
+                    newValue : newGroup,
+                    oldValue : oldGroup
+                }
+            }
+        let mockRecords = { records : { '2024-05-21' : { 'test.com' : { initDate : null, totalTime : 0} } } }
+        let mockRecordsResult = { records : { '2024-05-21' : { 'test.com' : { initDate : null, consecutiveTime : 0, totalTime : 0} } } }
+        let mockSite = { sites : [ { name : 'test.com', group: 'Test', restrictions : null } ] }
+        global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
+        global.chrome.storage.local.get.mockResolvedValueOnce(mockSite)
+        global.chrome.alarms.getAll.mockResolvedValueOnce([])
+
+        await handleStorageChange(changes, 'local')
+        expect(global.chrome.storage.local.set).toHaveBeenCalledOnce()
+        expect(global.chrome.storage.local.set).toBeCalledWith(mockRecordsResult)
+    })
+
+    it('should delete anything related to a site deleted consecutiveTime restriction', async () => {
+        let newGroup = [ { name: 'test.com', restrictions : null } ]
+        let oldGroup = [ { name: 'test.com', restrictions : {'consecutiveTime' : [{'days' : ['Tuesday'], 'time': 60, 'pause' : 60 } ] } } ]
+        let changes = 
+            { sites : 
+                {
+                    newValue : newGroup,
+                    oldValue : oldGroup
+                }
+            }
+        let mockRecords = { records : { '2024-05-21' : { 'test.com' : { consecutiveTime : 60, totalTime : 0} } } }
+        let mockRecordsResult = { records : { '2024-05-21' : { 'test.com' : { totalTime : 60} } } }
+        let mockSite = { sites : [ { name : 'test.com', group: 'Test', restrictions : null } ] }
+        global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
+        global.chrome.storage.local.get.mockResolvedValueOnce(mockSite)
+        global.chrome.alarms.getAll.mockResolvedValueOnce([])
+
+        await handleStorageChange(changes, 'local')
+        
+        expect(global.chrome.storage.local.set).toHaveBeenCalledOnce()
+        expect(global.chrome.storage.local.set).toBeCalledWith(mockRecordsResult) 
+    })
 })
+
 
 describe('handleOnAlarm', () => {
     beforeEach(() => {
@@ -172,22 +238,6 @@ describe('handleOnAlarm', () => {
         vi.useRealTimers()
     })
 
-    it('should not throw an error, I guess', async () => {
-        let mockAlarm = { name : 'test.com-consecutive-time-restriction-begin', sth : Date.now() }
-        let mockSites = {
-            sites : 
-            [
-                {
-                    name: 'test.com', 
-                    group: 'Test',
-                    restrictions : { "consecutiveTime" : { days : ["Tuesday"], consecutiveTime : 60, pause : 60 } }
-                }
-            ]
-        }
-        global.chrome.tabs.query.mockResolvedValueOnce([{id : 1, url : 'https://test.com'}])
-        global.chrome.storage.local.get.mockResolvedValueOnce(mockSites)
-        await handleOnAlarm(mockAlarm)
-    })
 
 
     // a tester : 

@@ -44,7 +44,8 @@ export async function cleanRecords(lastCleaned, records, todate) {
         let recDate = records[keys[i]] ;
 
         for (let site in recDate) {
-            if (recDate[site].totalTime === 0) delete recDate[site]
+            if (typeof recDate[site] === 'number') continue;
+            else if (recDate[site].totalTime === 0) delete recDate[site]
             else recDate[site] = recDate[site].totalTime
         }
         
