@@ -45,19 +45,6 @@ class ConsecutiveTimeRestrictionEditor extends HTMLElement {
                 </div>`;
     }
 
-    // newCard(index) {
-    //     this.innerHTML = `<div class="card">
-    //     <span id='delete-card-${ this.index }' class='material-symbols-outlined'> delete </span>
-    //     <day-column index='${this.index}' days='${JSON.stringify( this.temp.days)}' restrictionType='totalTime'></day-column>
-    //     <div class='time-input-column'>
-    //         <label for="consecutive-time-${this.index}">Max time straight :</label>
-    //         <input id='consecutive-time-${this.index}' type='number' value='${ this.temp.consecutiveTime / 60 }' minimum='0' />
-    //         <label for="pause-${this.index}">Pause :</label>
-    //         <input id='pause-${this.index}' type='number' value='${ this.temp.pause / 60 }' minimum = '0' />
-    //     </div>
-    // </div>`
-    // }
-
 
   async handleDelete() {
     this.dispatchEvent(new CustomEvent('deleteCard', {detail : {restrictionType: 'consecutiveTime', i : this.index}, bubbles : true}))
@@ -70,7 +57,7 @@ class ConsecutiveTimeRestrictionEditor extends HTMLElement {
     console.log('inputKey', inputKey)
 
     if (this.temp.pause === 0) return;
-
+    
     this.dispatchEvent(
         new CustomEvent("timeInputChange", {
             detail: {

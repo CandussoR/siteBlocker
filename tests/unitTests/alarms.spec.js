@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { createAlarms, getItemsWithNewRestrictions, handleOnAlarm, handleStorageChange } from '../../worker/alarms/alarmsHandler'
+import { createAlarms, getItemsWithNewRestrictions, handleOnAlarm, handleStorageChange } from '../../worker/alarmsHandler.js'
 
 
 global.chrome = {
@@ -11,7 +11,7 @@ global.chrome = {
     },
     alarms: {
         create: vi.fn(),
-        getAll : vi.fn(),
+        getAll : vi.fn().mockResolvedValueOnce([]),
         clear: vi.fn(),
         clearAll : vi.fn().mockResolvedValue(true)
     },
@@ -223,24 +223,24 @@ describe('handleStorageChange', () => {
 })
 
 
-describe('handleOnAlarm', () => {
-    beforeEach(() => {
-        // Reset mocks before each test
-        global.chrome.storage.local.get.mockReset()
-        global.chrome.storage.local.set.mockReset()
-        global.chrome.alarms.create.mockReset()
-        global.chrome.alarms.getAll.mockReset()
-        vi.useFakeTimers()
-        vi.setSystemTime(new Date(2024,4,21,10,0,0))
-      })
+// describe('handleOnAlarm', () => {
+//     beforeEach(() => {
+//         // Reset mocks before each test
+//         global.chrome.storage.local.get.mockReset()
+//         global.chrome.storage.local.set.mockReset()
+//         global.chrome.alarms.create.mockReset()
+//         global.chrome.alarms.getAll.mockReset()
+//         vi.useFakeTimers()
+//         vi.setSystemTime(new Date(2024,4,21,10,0,0))
+//       })
       
-    afterEach(() => {
-        vi.useRealTimers()
-    })
+//     afterEach(() => {
+//         vi.useRealTimers()
+//     })
 
 
 
-    // a tester : 
-    //  - si nom d'alarme commence par groupe, est-ce que tous les domaines du groupe sont restreints ?
-    //  - est-ce que toutes les propriétés consecutiveTime des domaines du groupe dans records sont remises à 0 au end et au check ?
-})
+//     // a tester : 
+//     //  - si nom d'alarme commence par groupe, est-ce que tous les domaines du groupe sont restreints ?
+//     //  - est-ce que toutes les propriétés consecutiveTime des domaines du groupe dans records sont remises à 0 au end et au check ?
+// })

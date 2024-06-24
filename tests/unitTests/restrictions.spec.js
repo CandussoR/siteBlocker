@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { isRestricted, isGroupRestrictedByTotalTime, isGroupRestrictedByConsecutiveTime } from '../../worker/blocker/restrictionsHandler.js'
+import { isRestricted, isGroupRestrictedByTotalTime, isGroupRestrictedByConsecutiveTime } from '../../worker/restrictionsHandler.js'
 import { fakeRecord, fakeGroup, fakeSites } from './fakeData.js'
 
 global.chrome = {

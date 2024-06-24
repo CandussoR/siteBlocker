@@ -1,14 +1,11 @@
-import { bookkeepingQueue } from '../blocker/blocker.js';
-import {getTodayRecord} from '../blocker/bookkeeping.js'
+import { bookkeepingQueue } from './bookkeepingQueue.js';
+import { getTodayRecord } from './bookkeeping.js';
 
-handleAlarms()
-
-async function handleAlarms() {
-    if (! await alarmsAreSet()) {
+export async function handleAlarms() {
+    if (!( await alarmsAreSet() )) {
         createAlarms()
     }
 }
-
 
 async function alarmsAreSet() {
     let alarms = await chrome.alarms.getAll()
