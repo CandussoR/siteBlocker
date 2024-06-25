@@ -31,7 +31,7 @@ Under development.
 - [ ] Customizable time of pause necessary before the time in a row gets reinitialized
 ### Service Worker
 - [x] Management of the alarms to fire beginning or end of restriction
-- [ ] Cleaning of the records to reduce the space taken by data
+- [x] Cleaning of the records to reduce the space taken by data
 - [ ] Customizable number of days stored in data
 - [ ] More precise system to calculate the total time per day
 ### Front
