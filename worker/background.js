@@ -63,7 +63,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     console.log("refocused window on following tab", tab)
 
     let restrictedSites = await getRestrictedSites();
-    if (!tab.url || ["chrome://newtab/", "redirected/redirected.html"].includes(tab.url)) return ;
+    if (!tab.url || ["chrome://newtab/", "ui/redirected/redirected.html"].includes(tab.url)) return ;
 
     let host = new URL(tab.url).host
     if (!restrictedSites.map(x => x.name).includes(host)) return ; 
@@ -78,7 +78,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (!changeUrl && !changeAudible) { 
       return ; 
     }
-    if (["chrome://newtab/", "redirected/redirected.html"].includes(changeUrl)) {
+    if (["chrome://newtab/", "ui/redirected/redirected.html"].includes(changeUrl)) {
       return ; 
     }
 
@@ -98,7 +98,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         if (message.ready && sender.tab.id === tabId) { sendResponse({url : url, host : host}) }
       });
-      chrome.tabs.update(tabId, {url : "redirected/redirected.html"});
+      chrome.tabs.update(tabId, {url : "ui/redirected/redirected.html"});
       return;
     }
 

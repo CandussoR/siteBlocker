@@ -179,7 +179,7 @@ async function redirectTabsRestrictedByAlarm(isGroup, name, sites = undefined, t
             if (message.ready && sender.tab.id === tabs[i].id) { sendResponse({url : tabs[i].url, host : host }) } 
         })
 
-        chrome.tabs.update(tabs[i].id, {url : "redirected/redirected.html"})
+        chrome.tabs.update(tabs[i].id, {url : "ui/redirected/redirected.html"})
     }
 }
 

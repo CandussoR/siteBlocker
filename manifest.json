@@ -10,7 +10,7 @@
         "alarms"
     ],
     "action": {
-        "default_popup": "popup/popup.html"
+        "default_popup": "ui/popup/popup.html"
     },
     "background": {
         "service_worker": "worker/background.js",
