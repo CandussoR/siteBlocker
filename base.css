@@ -1,19 +1,69 @@
 :root {
     font-size: clamp(calc(0.9rem + .3vw), 1rem, 1.5rem);
+    --text: #040406;
+    --background: #f1f3f8;
+    --primary: #6285ac;
+    --primary20: hsla(212, 31%, 53%, 0.2);
+    --primary40: hsla(212, 31%, 53%, 0.4);
+    --secondary: #afa1ce;
+    --accent: #9f83be;
   }
+
 
 ::before,
 ::after {
 box-sizing: border-box;
 }
 
-
 body {
-    padding: 2em;
-    display: flex;
+    display: grid;
+    grid-template-columns: 15% 85%;
+    background-color: var(--background);
+    color: var(--text);
+}
+
+/* Sidebar */
+aside {
+    position: sticky;
+    top: 0%;
+    left: 0%;
+    height : 100vh;
+    background-color: var(--primary20);
+    height: 100vh;
+}
+
+aside nav {
+    display : flex;
+    flex-direction: column;
+    padding : 1rem;
+}
+
+nav h1 {
+    margin-bottom: 1em;
+    margin-left : 0em;
+}
+
+nav a {
+    color : var(--text);
+    background-color: var(--background);
+    text-decoration: none;
+    padding: .2em 1em;
+    border-radius: 1em;
+    margin : .2em;
+}
+
+a.selected {
+    background-color: var(--primary);
+    font-weight: 600;
+}
+
+/* Main */
+main {
+    display : flex;
     flex-direction: column;
 }
 
+/* Components */
 h1 {
     margin : auto;
 }
@@ -38,7 +88,7 @@ div[id^="card-"][id$="times"]
     border: 1px grey dashed;
 }
 
-a-site {
+a-site, a-group {
     display: flex;
     padding: 2em 1em;
     width : max-content;
@@ -46,7 +96,7 @@ a-site {
     margin: 1em auto;
 }
 
-div #site {
+div #site, div #group {
     position: relative
 }
 
@@ -58,3 +108,5 @@ div#buttons {
 span.material-symbols-outlined {
     cursor : pointer;
 }
+
+

@@ -2,20 +2,32 @@
 <html>
     <head>
         <title>Your groups</title>
-        <link rel="stylesheet" href="../base.css"/>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+        <link rel="stylesheet" href="../../base.css"/>
+        <link preload rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" crossorigin/>
     </head>
     <body>
-        <h1>Your groups</h1>
-        <div>
-            <form formenctype="text/plain">
-                <label for="new-group">Create a group : </label>
-                <input type="text" id="new-group" required="">
-                <input id="create-group-button" type="submit" value="Create" accesskey="enter">
-            </form>
-        </div>
+        <aside>
+            <nav>
+                <h1>Menu</h1>
+                <a href="../sites/sites.html">Your sites</a>
+                <a href="../groups/groups.html" class="selected">Your groups</a>
+                <a href="../settings/settings.html">Settings</a>
+            </nav>
+        </aside>
 
-        <div id="groups"></div>
+        <main>
+            <h1>Your groups</h1>
+            <div>
+                <form formenctype="text/plain">
+                    <label for="new-group">Create a group : </label>
+                    <input type="text" id="new-group" required="">
+                    <input id="create-group-button" type="submit" value="Create" accesskey="enter">
+                </form>
+            </div>
+    
+            <div id="group-list"></div>
+        </main>
+
         <script src="group.js" type="module"></script>
     </body>
 </html>

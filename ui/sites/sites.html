@@ -2,11 +2,22 @@
 <html>
     <head>
         <title>Your sites</title>
-        <link rel="stylesheet" href="../base.css"/>
+        <link rel="stylesheet" href="../../base.css"/>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     </head>
     <body>
-        <h1>Your sites</h1>
-        <div id="site-list"></div>
+        <aside>
+            <nav>
+                <h1>Menu</h1>
+                <a href="../sites/sites.html" class="selected">Your sites</a>
+                <a href="../groups/groups.html">Your groups</a>
+                <a href="../settings/settings.html">Settings</a>
+            </nav>
+        </aside>
+
+        <main>
+            <h1>Your sites</h1>
+            <div id="site-list"></div>
+        </main>
         <script src="site-list.js" type="module"></script>
 </html>
