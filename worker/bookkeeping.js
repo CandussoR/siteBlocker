@@ -5,13 +5,7 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
       console.log("In bookkeeping I have received", flag, tabId, host) 
  
       let { records = [] } = await chrome.storage.local.get('records')
-      let todayRecord = getTodayRecord(records)
-      // This would be the case if we use the browser passed midnight,
-      // or if the computer is only on sleep mode and browser is never actually closed.
-      if (!todayRecord) {
-        setRecords(new Date().toISOString().split('T')[0])
-        todayRecord = getTodayRecord(records)
-      }
+      let todayRecord = await getTodayRecord(records)
 
       console.log("todayRecord, before the switch case", todayRecord, Object.keys(todayRecord))
       switch (flag) {
@@ -42,8 +36,12 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     }
   }
 
-export function getTodayRecord(records) {
+export async function getTodayRecord(records) {
     let date = new Date().toISOString().split('T')[0] ;
+    let todayRecord = records[date]
+    if (!todayRecord) {
+      todayRecord = await setRecords(date)
+    }
     return records[date]
 }
 

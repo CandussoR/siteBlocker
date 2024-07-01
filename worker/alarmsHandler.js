@@ -99,7 +99,7 @@ async function handleConsecutiveTimeAlarm(name) {
     if (name.includes('-check')) {
         // 2 minutes have passed since site has been left, putting it into totalTime and resetting
         let { records = [] } = await chrome.storage.local.get('records')
-        let todayRecord = getTodayRecord(records)
+        let todayRecord = await getTodayRecord(records)
         if (sitesOfGroup) {
             sitesOfGroup.forEach(s => todayRecord[s].consecutiveTime = 0)
         } else {
@@ -113,7 +113,7 @@ async function handleConsecutiveTimeAlarm(name) {
     
     if (name.includes('-end')) {
         let { records = [] } = await chrome.storage.local.get('records')
-        let todayRecord = getTodayRecord(records)
+        let todayRecord = await getTodayRecord(records)
         if (sitesOfGroup) {
             sitesOfGroup.forEach(s => todayRecord[s].consecutiveTime = 0)
         } else {
