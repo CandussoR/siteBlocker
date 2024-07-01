@@ -1,12 +1,16 @@
+import { setRecords } from "./settingRecord.js"
+
 export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     try {
       console.log("In bookkeeping I have received", flag, tabId, host) 
  
       let { records = [] } = await chrome.storage.local.get('records')
       let todayRecord = getTodayRecord(records)
+      // This would be the case if we use the browser passed midnight,
+      // or if the computer is only on sleep mode and browser is never actually closed.
       if (!todayRecord) {
-        console.error("No record has been set for today yet, a problem must have occured on startUp, aborting.")
-        return;
+        setRecords(new Date().toISOString().split('T')[0])
+        todayRecord = getTodayRecord(records)
       }
 
       console.log("todayRecord, before the switch case", todayRecord, Object.keys(todayRecord))
@@ -32,12 +36,6 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
       }
 
       console.log("we will set this in records", records)
-      // Debugging
-      for (let site in todayRecord) {
-        if (todayRecord[site].totalTime > 170000000) {
-          throw Error(`TotalTime has been wrongly set after event ${flag} in ${tabId} with host ${host}`)
-        }
-      }
       await chrome.storage.local.set({records : records})
     } catch (error) {
       console.log("Error in bookkeeping, avorting any change", error)
@@ -46,7 +44,6 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
 
 export function getTodayRecord(records) {
     let date = new Date().toISOString().split('T')[0] ;
-    console.log(date)
     return records[date]
 }
 
