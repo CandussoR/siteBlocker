@@ -39,7 +39,7 @@ async function checkDuplicateValue(v) {
 async function buildGroupComponents() {
     let { groups = [] } = await chrome.storage.local.get('groups')
     console.log("building groups with", groups)
-    let div = document.getElementById('groups')
+    let div = document.getElementById('group-list')
     div.textContent = ''
     for (let i = 0 ; i < groups.length ; i++) {
         console.log(groups[i].restrictions)
@@ -54,7 +54,13 @@ async function confirmDelete(index) {
     let { groups = [] } = await chrome.storage.local.get('groups')
     
     if (confirm('Are you sure you want to delete this group?')) {
-        groups.splice(index, 1);
+        let group = groups.splice(index, 1)[0];
+
+        let {sites = [] } = await chrome.storage.local.get('sites')
+        for (let s of sites) {
+            if (s.group && s.group === group.name) delete s.group
+        }
+        await chrome.storage.local.set({sites : sites})
 
         await chrome.storage.local.set({ groups: groups });
 
