@@ -5,34 +5,58 @@ async function chargeDynamicHTML() {
     
     document.getElementById('redirect-to-sites')
     .addEventListener('click', () => {
-        let url = chrome.runtime.getURL('sites/sites.html')
+        let url = chrome.runtime.getURL('ui/sites/sites.html')
         chrome.tabs.create({url : url})
     })
 
     
     document.getElementById('redirect-to-groups')
     .addEventListener('click', () => {
-        let url = chrome.runtime.getURL('groups/groups.html')
+        let url = chrome.runtime.getURL('ui/groups/groups.html')
         chrome.tabs.create({url : url})
     })
 
     let { sites = [] } = await chrome.storage.local.get('sites')
-    let currentSite = document.getElementById('host')
-    let filtered = sites.filter(el => el.name === currentSite.innerHTML)
-    if (filtered.length === 0) {
-        console.log("no corresponding site in storage")
-        document.getElementById('add-to-group').addEventListener('click', chooseGroup)
-        document.getElementById('add-to-sites').addEventListener('click', addSite)
+    let activeTab = await chrome.tabs.query({ active: true, currentWindow: true })
+    let activeTabHost = new URL(activeTab[0].url).host;    
+    let filtered = sites.find(el => el.name === activeTabHost)
+    let restrictedTextContent = filtered && filtered.group 
+        ? `This site is already restricted and belongs to the ${filtered.group} group.` 
+        : "This site is already restricted."
+
+    if (!filtered) {
+        document.getElementById('add-to-sites').addEventListener('click', async () => await addSite())
         return;
+    } 
+    
+    let addToSites = document.getElementById('add-to-sites')
+    let deleteFromSites = document.createElement('button')
+    deleteFromSites.id = 'delete-site'
+    deleteFromSites.innerText = 'Delete from sites'
+    addToSites.replaceWith(deleteFromSites)
+    deleteFromSites.addEventListener('click', async () => await deleteSite())
+
+    if (!filtered.group) {
+        document.getElementById('add').insertAdjacentHTML('afterbegin', '<button id="add-to-group">Add to a group</button>')
+        document.getElementById('add-to-group').addEventListener('click', chooseGroup)
+    } else {
+        document.getElementById('add').insertAdjacentHTML('afterbegin', '<button id="delete-group">Delete from group</button>')
+        document.getElementById('delete-group').addEventListener('click', async () => {
+            delete filtered.group
+            await chrome.storage.local.set({sites : sites})
+            restrictedTextContent = "This site is already restricted."
+            document.getElementById('restricted').innerHTML = restrictedTextContent
+            document.getElementById('add').insertAdjacentHTML('beforeend', '<button id="add-to-group">Add to a group</button>')
+            document.getElementById('add-to-group').addEventListener('click', chooseGroup)
+            location.reload()
+            return;
+        })
     }
         
     let alreadyRestricted = document.createElement('p')
-    alreadyRestricted.textContent = "This site is already restricted."
-    currentSite.replaceWith(alreadyRestricted)
-    document.getElementById('add-to-sites').remove()
-
-    if (filtered[0].group !== undefined) { document.getElementById('add-to-group').remove() }
-
+    alreadyRestricted.id = 'restricted'
+    alreadyRestricted.textContent = restrictedTextContent
+    document.getElementById('host').replaceWith(alreadyRestricted)
 }
 
 
@@ -42,28 +66,6 @@ async function updateHost() {
         document.getElementById('host').innerHTML = activeTabUrl.host;
       });
   }
-
-
-async function listSites() {
-    let { sites = []} = await chrome.storage.local.get('sites')
-
-    let s = document.getElementById('sites')
-    let site_origin = document.createElement('p')
-    site_origin.id = 'precision'
-    if (sites.length === 0) {
-        site_origin.innerText = 'Loading sites from the templates exported'
-    } else {
-        site_origin.innerText = 'Found your sites :'
-    }
-    s.appendChild(site_origin)
-
-    for (let i = 0; i < sites.length; i++) {
-        let site_name = document.createElement('p')
-        site_name.id = sites[i].site
-        site_name.innerText = sites[i].site
-        s.appendChild(site_name)
-    }
-}
 
 
 async function chooseGroup() {
@@ -91,6 +93,7 @@ function replaceButtonByGroupSelectHTML(s, groups) {
 
     let form = document.createElement('form')
     form.setAttribute("formenctype", "text/plain")
+    form.id = 'form'
     div.appendChild(form)
 
     let label = document.createElement('label')
@@ -108,30 +111,24 @@ function replaceButtonByGroupSelectHTML(s, groups) {
     }
     form.appendChild(select)
 
-    let submit = document.createElement('input')
-    submit.type = "submit"
-    submit.value = 'Add'
-    form.appendChild(submit)
+    form.insertAdjacentHTML('beforeend', '<div id="button-row"><input id="submit" type="submit" value="Add"/><button id="cancel">Cancel</button></div>')
     
     s.replaceWith(div)
 
-    let createButton = document.createElement('button')
-    createButton.id = "create-new-group"
-    createButton.innerHTML = "Create a new group"
-    div.appendChild(createButton)
+    div.insertAdjacentHTML('beforeend', '<button id="create-new-group"><span class="material-symbols-outlined"> add </span> New group</button>')
 
-    // Event
-    submit.addEventListener('click', async (event) => {
+    document.getElementById('submit').addEventListener('click', async (event) => {
         event.preventDefault()
         let select = document.getElementById('select-group')
         if (select.options[select.selectedIndex].value !== '') {
             let group = groups[select.options[select.selectedIndex].value].name
-            let host = document.getElementById('host').innerHTML
-            await addSiteToGroup(host, group)
+            let activeTab = await chrome.tabs.query({ active: true, currentWindow: true })
+            let activeTabHost = new URL(activeTab[0].url).host;
+            await addSiteToGroup(activeTabHost, group)
         }
     })
 
-    createButton.addEventListener('click', () => replaceByCreateGroupButton(div))
+    document.getElementById('create-new-group').addEventListener('click', () => replaceByCreateGroupButton(div))
 }
 
 function replaceByCreateGroupButton(el) {
@@ -155,13 +152,20 @@ function replaceByCreateGroupButton(el) {
     submit.value = "Create"
     submit.accessKey = "enter"
     
+    
     el.replaceWith(div)
     div.appendChild(form)
-    div.appendChild(label)
-    div.appendChild(input)
-    div.appendChild(submit)
+    div.insertAdjacentHTML('afterbegin', 
+        `<form formenctype="text/plain">
+        <label for="new-group">Create a group : </label>
+        <input type="text" id="new-group" required="">
+        <div id="button-row">
+            <input id="create-group-button" type="submit" value="Create" accesskey="enter">
+            <button id="cancel">Cancel</button>
+        </div>
+        </form>`)
 
-    submit.addEventListener('click', async (event) => {
+    document.getElementById('create-group-button').addEventListener('click', async (event) => {
         event.preventDefault();
         let inputValue = document.getElementById("new-group").value
         let site = document.getElementById('host').innerHTML
@@ -172,6 +176,8 @@ function replaceByCreateGroupButton(el) {
         successP.innerHTML = "Successfully added"
         div.appendChild(successP)
     })
+
+    document.getElementById('cancel').addEventListener('click', () => location.reload())
 }
 
 async function initializeGroupWithSite(group, site) {
@@ -203,9 +209,19 @@ async function addSiteToGroup(host, groupName) {
 
 async function addSite() {
     let { sites = [] } = await chrome.storage.local.get('sites')
-    let host = document.getElementById('host').innerHTML;
-    sites.push({"name" : host, 
-    "restrictions" : null })
+    let activeTab = await chrome.tabs.query({ active: true, currentWindow: true })
+    let activeTabHost = new URL(activeTab[0].url).host;
+    sites.push({"name" : activeTabHost, "restrictions" : null })
+    await chrome.storage.local.set({sites : sites})
+    location.reload()
+}
+
+
+async function deleteSite() {
+    let {sites = []} = await chrome.storage.local.get('sites')
+    let activeTab = await chrome.tabs.query({ active: true, currentWindow: true })
+    let activeTabHost = new URL(activeTab[0].url).host;
+    sites = sites.filter(x => x.name !== activeTabHost);
     await chrome.storage.local.set({sites : sites})
     location.reload()
 }

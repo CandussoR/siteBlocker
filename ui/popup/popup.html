@@ -1,27 +1,20 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link rel="stylesheet" href="popup.css">
+        <link preload rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" crossorigin/>
         <title>Web Blocker</title>
-        <style>
-            body {
-              min-width: 300px;
-              font-size: 15px;
-              margin: 0 auto;
-            }
-        
-            input {
-              margin: 5px;
-              outline: none;
-            }
-          </style>
     </head>
     <body>
         <h1 id="popup-title">Your site blocker</h1>
         <p id="host"></p>
-        <button id="add-to-group">Add this site to a group</button>
-        <button id="add-to-sites">Add this site to the restricted list</button>
-        <button id="redirect-to-sites">See my sites details</button>
-        <button id="redirect-to-groups">See my groups details</button>
+        <div id="add">
+          <button id="add-to-sites">Add to restricted</button>
+        </div>
+        <div id="links">
+          <button id="redirect-to-sites">See my sites</button>
+          <button id="redirect-to-groups">See my groups</button>
+        </div>
         <script src="popup.js" type="module"></script>
     </body>
 </html>

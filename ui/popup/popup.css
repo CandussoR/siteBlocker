@@ -1,0 +1,106 @@
+:root {
+    font-size: clamp(calc(0.9rem + .3vw), 1rem, 1.5rem);
+    --text: #040406;
+    --background: #f1f3f8;
+    --primary: #6285ac;
+    --primary20: hsla(212, 31%, 53%, 0.2);
+    --primary40: hsla(212, 31%, 53%, 0.4);
+    --secondary: hsl(259, 31%, 72%);
+    --secondary20: hsl(259, 31%, 72%, 0.2);
+    --secondary40: hsl(259, 31%, 72%, 0.4);
+    --secondary60: hsl(259, 31%, 72%, 0.6);
+    --accent: #9f83be;
+  }
+
+
+::before,
+::after {
+box-sizing: border-box;
+}
+
+body {
+    background-color: var(--background);
+    min-width: 300px;
+    font-size: 15px;
+    display: flex;
+    flex-direction: column;
+  }
+
+input {
+    margin: 5px;
+    outline: none;
+}
+
+h1 {
+    margin : .5em auto;
+    font-variant: small-caps;
+}
+
+p {
+    margin: 0 auto 1em;
+}
+
+div#add {
+    display: flex;
+    flex-direction: column;
+    margin : auto;
+    margin-bottom : 1em;
+}
+
+div#links, div#button-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1em;
+}
+
+div#button-row {
+    margin-bottom : .5em
+}
+
+div#form, div#add-to-group-div {
+    display: flex;
+    flex-direction : column;
+}
+
+div:not(:last-child) {
+    margin-bottom: 1em;
+}
+
+form input, button {
+    border-radius: 5px;
+    padding: .5em .25em;
+    margin: .1em;
+    border: 1px solid;
+    background-color: var(--primary20);
+}
+
+button#create-new-group {
+    display : flex;
+    place-items: center;
+    margin: auto;
+    padding-right: .5em;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+form input, #create-group-button {
+    background-color: var(--accent);
+    /* margin-bottom: 1em; */
+    font-weight: 600;
+}
+
+form input[type='text'] {
+    background-color : #FFFFFFFF;
+}
+
+select {
+    margin: .5em 0;
+}
+
+label {
+    font-weight: 500;
+}
+
