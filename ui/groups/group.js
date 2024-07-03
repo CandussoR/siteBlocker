@@ -1,6 +1,8 @@
 import './components/groupComponent.js'
 
-await buildGroupComponents()
+let { groups = [] } = await chrome.storage.local.get('groups')
+await buildGroupComponents(groups)
+createGroupMenu(groups)
 
 document.querySelector('#create-group-button').addEventListener('click', async (event) => {
     event.preventDefault();
@@ -23,24 +25,19 @@ document.querySelector('#create-group-button').addEventListener('click', async (
     // Update the groups in Chrome local storage
     await chrome.storage.local.set({ groups: groups })
 
-    console.log("groups set")
-
-    await buildGroupComponents()
+    await buildGroupComponents(groups)
 })
 
 async function checkDuplicateValue(v) {
     let {groups = []} = await chrome.storage.local.get('groups')
     if (groups.length === 0) {
-        console.log("no groups")
         return false;
     } else if (groups.findIndex(el => el.name === v) !== -1) {
         return true ;
     }
 }
 
-async function buildGroupComponents() {
-    let { groups = [] } = await chrome.storage.local.get('groups')
-    console.log("building groups with", groups)
+async function buildGroupComponents(groups) {
     let div = document.getElementById('group-list')
     div.textContent = ''
     for (let i = 0 ; i < groups.length ; i++) {
@@ -66,6 +63,35 @@ async function confirmDelete(index) {
 
         await chrome.storage.local.set({ groups: groups });
 
-        buildGroupComponents();
+        buildGroupComponents(groups);
     }
 }    
+
+function createGroupMenu(groups) {
+    const template = document.querySelector('#group-anchor')
+    let nav = document.getElementById('group-nav')
+  
+    for (let g of groups) {
+      
+      let clone = document.importNode(template.content, true);
+      let a = clone.querySelector('.group-menu-item')
+      a.href = `#${g.name}`
+      a.textContent = g.name
+      if (nav.getElementsByTagName('a').length === 0) {
+        a.classList.add('selected')
+      }
+      nav.appendChild(clone)
+    }
+  }
+  
+  window.onhashchange = () => {
+    let all = document.querySelectorAll('.group-menu-item')
+    let prev = document.querySelector('.group-menu-item.selected')
+    let sth = window.location.hash
+    let curr = document.querySelector(`[href='${sth}']`)
+    prev.classList.remove('selected')
+    if (all.find(x => x.hash === sth)) {
+      curr.classList.add('selected')
+    }
+  }
+  

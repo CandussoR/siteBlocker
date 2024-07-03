@@ -3,6 +3,7 @@
     <head>
         <title>Your groups</title>
         <link rel="stylesheet" href="../../base.css"/>
+        <link rel="stylesheet" href="groups.css"/>
         <link preload rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" crossorigin/>
     </head>
     <body>
@@ -16,7 +17,7 @@
         </aside>
 
         <main>
-            <h1>Your groups</h1>
+            <h1 id="top">Your groups</h1>
             <div>
                 <form formenctype="text/plain">
                     <label for="new-group">Create a group : </label>
@@ -26,7 +27,18 @@
             </div>
     
             <div id="group-list"></div>
+            <div id="to-the-top">
+                <a href="#top"><img src='..\assets\arrow_upward.svg'>To the top<img src='..\assets\arrow_upward.svg'></a>
+            </div>
         </main>
+
+        <aside id="group-menu">
+            <nav id="group-nav">
+                <template id="group-anchor">
+                    <a class="group-menu-item"></a>
+                </template>
+            </nav>
+        </aside>
 
         <script src="group.js" type="module"></script>
     </body>

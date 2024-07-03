@@ -3,11 +3,12 @@
     <head>
         <title>Your sites</title>
         <link rel="stylesheet" href="../../base.css"/>
+        <link rel="stylesheet" href="sites.css"/>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     </head>
     <body>
         <aside>
-            <nav>
+            <nav id="app-nav">
                 <h1>Menu</h1>
                 <a href="../sites/sites.html" class="selected">Your sites</a>
                 <a href="../groups/groups.html">Your groups</a>
@@ -16,8 +17,22 @@
         </aside>
 
         <main>
-            <h1>Your sites</h1>
+            <h1 id="top">Your sites</h1>
             <div id="site-list"></div>
+            <div id="to-the-top">
+                <a href="#top"><img src='..\assets\arrow_upward.svg'>To the top<img src='..\assets\arrow_upward.svg'></a>
+            </div>
         </main>
+
+        <aside id="site-menu">
+            <nav id="sites-nav">
+                <template id="site-anchor">
+                    <a class="site-menu-item"></a>
+                </template>
+            </nav>
+        </aside>
+
+
+
         <script src="site-list.js" type="module"></script>
 </html>
