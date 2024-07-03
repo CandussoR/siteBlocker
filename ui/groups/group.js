@@ -24,6 +24,8 @@ document.querySelector('#create-group-button').addEventListener('click', async (
     await chrome.storage.local.set({ groups: groups })
 
     console.log("groups set")
+
+    await buildGroupComponents()
 })
 
 async function checkDuplicateValue(v) {
