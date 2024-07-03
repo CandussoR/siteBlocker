@@ -28,29 +28,33 @@ class SiteComponent extends HTMLElement {
         this.setAttribute('restrictions', r); }
 
     buildHTML() {
-        this.innerHTML = `<div id='site'>
-                        <div id='buttons'>
-                            <span id="edit-button" class='material-symbols-outlined'>edit</span>
-                            <span id="remove-button" class='material-symbols-outlined'>remove</span>
-                        </div>
-                        <p id="site-name"> ${this.name} </p>
-                        <p id="group-name">
-                            <span class="group-label">Group : </span>
-                            ${this.group !== null && this.group !== undefined ? this.group : '--'}
-                        </p>
-                    </div>`
+        this.innerHTML = `<div id='${this.name}'>
+                            <div id='${this.name}-title-row'>
+                                <h2 id="${this.name}-site-name"> ${this.name} </h2>
+                                <div id='${this.name}-buttons'>
+                                    <span id="edit-button" class='material-symbols-outlined'>edit</span>
+                                    <span id="remove-button" class='material-symbols-outlined'>remove</span>
+                                </div>
+                            </div>
+                            <div id='${this.name}-details'>
+                                <div id="group-name">
+                                    <h3>Group </h3>
+                                    <p>${this.group !== null && this.group !== undefined ? this.group : '--'}</p>
+                                </div>
+                            </div>
+                        </div>`
 
         if (!this.restrictions) {
             return  this.innerHTML
         }
 
-        this.querySelector('#group-name').insertAdjacentHTML("afterend", `<restriction-item item-type="site" restrictions=${JSON.stringify(this.restrictions)} />`)
+        document.getElementById(`${this.name}-details`).insertAdjacentHTML("beforeend", `<div id='${this.name}-restrictions'><h3>Restrictions</h3><restriction-item item-type="site" restrictions=${JSON.stringify(this.restrictions)} /></div>`)
 
         return this.innerHTML
     }
 
     async handleRemove() {
-        let siteName = this.querySelector('#site-name').textContent.trim()
+        let siteName = this.querySelector("[id$='-site-name']").textContent.trim()
 
         let { sites = [] } = await chrome.storage.local.get('sites')
         console.log("sites before", sites)
