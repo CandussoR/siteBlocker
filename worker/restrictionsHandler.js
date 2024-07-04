@@ -148,7 +148,7 @@ export async function isGroupRestrictedByConsecutiveTime(host, groupRestriction,
   let todayGroup = groupRestriction.find(x => x.days.includes(currentDay))
   if ( todayGroup && 'consecutiveTime' in todayGroup) {
     let totalGroupTime = 0
-    sitesOfGroup.forEach(site => { totalGroupTime += todayRecord[site].consecutiveTime });
+    sitesOfGroup.forEach(site => { totalGroupTime += todayRecord[site].consecutiveTime || 0});
     if (totalGroupTime >= todayGroup.consecutiveTime) return true;
     groupTimeLeft = todayGroup.consecutiveTime - totalGroupTime
   }
