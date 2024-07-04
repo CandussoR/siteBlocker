@@ -5,7 +5,10 @@
     --primary: #6285ac;
     --primary20: hsla(212, 31%, 53%, 0.2);
     --primary40: hsla(212, 31%, 53%, 0.4);
-    --secondary: #afa1ce;
+    --secondary: hsl(259, 31%, 72%);
+    --secondary20: hsl(259, 31%, 72%, 0.2);
+    --secondary40: hsl(259, 31%, 72%, 0.4);
+    --secondary60: hsl(259, 31%, 72%, 0.6);
     --accent: #9f83be;
   }
 
@@ -29,7 +32,6 @@ aside {
     left: 0%;
     height : 100vh;
     background-color: var(--primary20);
-    height: 100vh;
 }
 
 aside nav {
@@ -68,6 +70,18 @@ h1 {
     margin : auto;
 }
 
+main h1 {
+    font-variant: small-caps;
+    margin: 2em auto;
+}
+
+h3 {
+    margin : 0;
+    padding: 1em 1em;
+    font-variant : small-caps;
+}
+
+
 .card {
     display : grid;
     grid-template-columns: 1fr 1fr;
@@ -76,10 +90,7 @@ h1 {
 #time-slot-container,
 #total-time-container,
 #consecutive-time-container {
-    width: fit-content;
-    margin: 2em;
     padding : 1em;
-    border: 1px black solid;
 }
 
 div[id^="card-"][id$="days"],
@@ -90,10 +101,37 @@ div[id^="card-"][id$="times"]
 
 a-site, a-group {
     display: flex;
-    padding: 2em 1em;
+    width: 100%;
+    border-radius: 5px;
     width : max-content;
-    background-color: yellowgreen;
     margin: 1em auto;
+}
+
+a-group, a-site {
+    border: 3px solid var(--accent);
+}
+
+div[id$="-title-row"] {
+    display: flex;
+    align-items: center;
+    justify-content : space-between;
+    background-color : var(--accent);
+    padding: 0 1em;
+}
+
+div#group-list, div#site-list {
+    max-width: 60%;
+    overflow: hidden;
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+
+restriction-item {
+    display: flex;
+    flex-direction: column;
+    width: 90%;
 }
 
 div #site, div #group {
@@ -109,4 +147,25 @@ span.material-symbols-outlined {
     cursor : pointer;
 }
 
+/* Popup */
+main#popup {
+    min-width: 300px;
+}
 
+/* To the top */
+#to-the-top {
+    display: flex;
+    align-self: end;
+    justify-content: flex-end;
+    position: sticky;
+    bottom: 1em;
+    background-color: var(--accent);
+    border-radius: 50%;
+    padding: 1em;
+    margin-right: 1em;
+}
+
+
+#top {
+    color : var(--text);
+}
