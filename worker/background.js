@@ -1,5 +1,5 @@
 
-import { template_sites } from './sites.js'
+import { template_sites, daysToRecord, consecutiveTimeReset } from './dataInit.js'
 import { setRecords, cleanRecords } from './settingRecord.js'
 import './bookkeepingQueue.js'
 import { processOrEnqueue } from './blocker.js'
@@ -15,6 +15,8 @@ chrome.runtime.onInstalled.addListener(async () => {
     if (groups === undefined || groups.length === 0) {
         await chrome.storage.local.set({ groups : [] })
     }
+    await chrome.storage.local.set({daysToRecord : daysToRecord});
+    await chrome.storage.local.set({consecutiveTimeReset : consecutiveTimeReset});
 })
 
 chrome.runtime.onStartup.addListener( async () => {
