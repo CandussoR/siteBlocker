@@ -28,17 +28,17 @@ Under development.
 - [x] Time Slot Restriction
 - [x] Total Time Restriction
 - [x] Time in a Row Restriction
-- [ ] Customizable time of pause necessary before the time in a row gets reinitialized
+- [x] Customizable time of pause necessary before the time in a row gets reinitialized
 ### Service Worker
 - [x] Management of the alarms to fire beginning or end of restriction
 - [x] Cleaning of the records to reduce the space taken by data
-- [ ] Customizable number of days stored in data
+- [x] Customizable number of days stored in data
 - [ ] More precise system to calculate the total time per day
 ### Front
 - [x] Front overall behavior through web components
 - [ ] Shadow tree for cleaner HTML
 - [ ] CSS and design stuff
-- [ ] Side bar to navigate through the different pages of the extension
+- [x] Side bar to navigate through the different pages of the extension
 - [ ] Data visualisation page
 
 ## Use
