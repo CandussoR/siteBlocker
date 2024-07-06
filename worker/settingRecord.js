@@ -29,6 +29,15 @@ export async function setRecords(today) {
         }
     }
 
+    let priv = groups.find(x => x.name === 'Private')
+    if (priv) {
+        records[today].Private = {initDate : null, totalTime : 0, audible : false, tabId : null, focused : false } ;
+        if (priv.restrictions 
+            && 'consecutiveTime' in priv.restrictions 
+            && priv.restrictions.consecutiveTime.find(x => x.days.includes(day))
+        ) records[today].Private.consecutiveTime = 0;
+    }
+
     await chrome.storage.local.set({records : records}) ;
 
     return records

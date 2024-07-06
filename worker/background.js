@@ -17,6 +17,7 @@ chrome.runtime.onInstalled.addListener(async () => {
     }
     await chrome.storage.local.set({daysToRecord : daysToRecord});
     await chrome.storage.local.set({consecutiveTimeReset : consecutiveTimeReset});
+    await chrome.storage.local.set({restrictPrivate : false});
 })
 
 chrome.runtime.onStartup.addListener( async () => {
@@ -45,7 +46,7 @@ import { getRestrictedSites, isRestricted } from './restrictionsHandler.js'
 // Fires when the active tab in a window changes.
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
     let tab = await chrome.tabs.get(activeInfo.tabId)
-    console.log("changes on this tab")
+    console.log("changes on this tab", activeInfo)
     if (!tab.url) return;
     let restrictedSites = await getRestrictedSites();
     let host = new URL(tab.url).host
@@ -84,6 +85,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       return ; 
     }
 
+    if (tab.incognito) {
+      let { restrictPrivate } = await chrome.storage.local.get('restrictPrivate');
+      if (!restrictPrivate) return ;
+    }
+
     console.log("update", tabId, changeInfo, tab, new Date())
     let flag = 'open';
     let restrictedSites = await getRestrictedSites();
@@ -92,7 +98,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     let url = changeUrl || tab.url;
     if (!url) return;
     
-    let host = new URL(url).host;
+    let host = tab.incognito ? "private" : new URL(url).host;
     if (!restrictedSites.map(x => x.name).includes(host)) return ;
 
     if (await isRestricted(host, restrictedSites)) {
@@ -105,14 +111,11 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     }
 
     if (changeInfo.audible === true) {
-      console.log(changeInfo, "seems you began to play sth", tab.url);
       flag = 'audible-start';
     } else if (changeInfo.audible === false) {
-      console.log(changeInfo, "seems you stop playing something", tab.url);
       flag = 'audible-end';
     }
 
-    console.log("Okay, damn this never end, let me bookkeep that", new Date());
     await processOrEnqueue(flag, tabId, host);
 });
   

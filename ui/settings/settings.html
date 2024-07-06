@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../../base.css"/>
+    <link rel="stylesheet" href="settings.css"/>
+    <link preload rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" crossorigin/>
+    <title>Settings</title>
+</head>
+<body>
+    <aside>
+        <nav id="general">
+            <div id="h1-div">
+                <span class="material-symbols-outlined">menu</span>
+                <h1>Menu</h1>
+            </div>
+            <a href="../sites/sites.html">Your sites</a>
+            <a href="../groups/groups.html" >Your groups</a>
+            <a href="../settings/settings.html" class="selected">Settings</a>
+        </nav>
+    </aside>
+
+    <main>
+        <h1>Your settings</h1>
+        <form>
+            <div class="form-entry">
+                <h3>Records</h2>
+                <label for="number-of-days">Number of days saved in records :</label>
+                <input id="number-of-days" type="number" max="365" min="1">
+            </div>
+            <div class="form-entry">
+                <h3>Consecutive time restriction</h3>
+                <label for="consecutive-time-reset">Number of minutes before consecutive time passed on site is reset : </label> 
+                <input id="consecutive-time-reset" type="number" max="120" min="1">
+            </div>
+            <div class="form-entry">
+                <h3>Private mode</h3>
+                <input id="private" type="checkbox">
+                <label for="private">Restrict private window time</label>
+            </div>
+            <p class="error"></p>
+            <div id="button-row">
+                <input id="submit" type="submit" value="Save">
+                <button id="default">Reset</button>
+            </div>
+        </form>
+    </main>
+    <script src="settings.js" type="module"></script>
+</body>
+</html>
