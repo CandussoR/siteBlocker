@@ -52,6 +52,7 @@ describe('setRecords', () => {
         global.chrome.storage.local.get.mockResolvedValueOnce(rawFakeRecord)
         global.chrome.storage.local.get.mockResolvedValueOnce(fakeSites)
         global.chrome.storage.local.get.mockResolvedValueOnce(fakeGroup)
+        global.chrome.storage.local.get.mockResolvedValueOnce({daysToRecord : 30})
         global.chrome.storage.local.get.mockResolvedValueOnce([])
         let result = await setRecords(today)
         expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(1, fakeRecordResult)
@@ -98,11 +99,55 @@ describe('setRecords', () => {
         global.chrome.storage.local.get.mockResolvedValueOnce(rawFakeRecord)
         global.chrome.storage.local.get.mockResolvedValueOnce(fakeSites)
         global.chrome.storage.local.get.mockResolvedValueOnce(mockGroup)
+        global.chrome.storage.local.get.mockResolvedValueOnce({daysToRecord : 30})
         global.chrome.storage.local.get.mockResolvedValueOnce([])
         let result = await setRecords(today)
         expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(1, fakeRecordResult)
         expect(result).toStrictEqual(fakeRecordResult.records)
     })
+
+    it('should keep the good number of records', async () => {
+      let today = new Date().toISOString().split('T')[0];
+      let mockGroup = {
+          groups : [
+            {
+              name : 'Test',
+              restrictions : {
+                consecutiveTime : [
+                  {
+                    days : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
+                    consecutiveTime : 60,
+                    pause : 60
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      let rawFakeRecord = {
+          "records"  : {"2024-05-20": {
+               "test.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
+               "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
+               }
+             }
+           };
+      let fakeRecordResult = {
+          "records"  : {
+              "2024-05-21": {
+                  "test.com": { audible: false, focused: false, initDate: null, tabId: null, consecutiveTime : 0, totalTime: 0, },
+                  "test2.com": { audible: false, focused: false, initDate: null, tabId: null, consecutiveTime : 0, totalTime: 0, },
+                  },
+              }
+          }
+      global.chrome.storage.local.get.mockResolvedValueOnce(rawFakeRecord)
+      global.chrome.storage.local.get.mockResolvedValueOnce(fakeSites)
+      global.chrome.storage.local.get.mockResolvedValueOnce(mockGroup)
+      global.chrome.storage.local.get.mockResolvedValueOnce({daysToRecord : 1})
+      global.chrome.storage.local.get.mockResolvedValueOnce([])
+      let result = await setRecords(today)
+      expect(global.chrome.storage.local.set).toHaveBeenNthCalledWith(1, fakeRecordResult)
+      expect(result).toStrictEqual(fakeRecordResult.records)
+  })
 })
 
 describe('cleanRecords', () => {

@@ -19,3 +19,7 @@ export const template_sites = [
     { "name": "www.facebook.com", "restrictions": null },
     { "name": "www.tiktok.com", "restrictions": null }
 ]
+
+export const daysToRecord = 30
+export const consecutiveTimeReset = 2
+export const consecutiveTimeResetPercent = .25

@@ -5,6 +5,8 @@
     --primary: #6285ac;
     --primary20: hsla(212, 31%, 53%, 0.2);
     --primary40: hsla(212, 31%, 53%, 0.4);
+    --primaryDesaturated: hsla(212, 31%, 80%);
+
     --secondary: hsl(259, 31%, 72%);
     --secondary20: hsl(259, 31%, 72%, 0.2);
     --secondary40: hsl(259, 31%, 72%, 0.4);
@@ -23,46 +25,17 @@ body {
     grid-template-columns: 15% 85%;
     background-color: var(--background);
     color: var(--text);
-}
-
-/* Sidebar */
-aside {
-    position: sticky;
-    top: 0%;
-    left: 0%;
-    height : 100vh;
-    background-color: var(--primary20);
-}
-
-aside nav {
-    display : flex;
-    flex-direction: column;
-    padding : 1rem;
-}
-
-nav h1 {
-    margin-bottom: 1em;
-    margin-left : 0em;
-}
-
-nav a {
-    color : var(--text);
-    background-color: var(--background);
-    text-decoration: none;
-    padding: .2em 1em;
-    border-radius: 1em;
-    margin : .2em;
-}
-
-a.selected {
-    background-color: var(--primary);
-    font-weight: 600;
+    padding: 0;
+    background: linear-gradient(180deg, var(--background) 50%, var(--primary20) 100%) no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
 }
 
 /* Main */
 main {
     display : flex;
     flex-direction: column;
+    padding: 2em;
 }
 
 /* Components */
@@ -168,4 +141,10 @@ main#popup {
 
 #top {
     color : var(--text);
+}
+
+@media (max-width: 768px) {
+    body {
+        display: block;
+    }
 }

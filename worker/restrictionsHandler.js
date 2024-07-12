@@ -13,8 +13,8 @@ export async function isRestricted(host, sites) {
     const currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date)
     let siteIndex = sitesName.findIndex(x => x === host)
     let siteRestrictions = sites[siteIndex].restrictions
-    let siteGroup = sites[siteIndex].group
-    console.log("host", host, "sites", sites, "siteIndex", siteIndex, "sites[siteIndex]", sites[siteIndex], "siteRestrictions", siteRestrictions, "siteGroup", siteGroup)
+    let siteGroup = host === 'private' ? 'Private' : sites[siteIndex].group
+    // console.log("host", host, "sites", sites, "siteIndex", siteIndex, "sites[siteIndex]", sites[siteIndex], "siteRestrictions", siteRestrictions, "siteGroup", siteGroup)
 
     let alarms = await chrome.alarms.getAll()
     if (alarms.length !== 0) {
@@ -25,12 +25,9 @@ export async function isRestricted(host, sites) {
     }
 
     if (siteGroup) {
-        console.log("siteGroup", siteGroup)
         let { groups = [] } = await chrome.storage.local.get('groups')
         let groupIndex = groups.findIndex(g => g.name === siteGroup)
-        console.log("groupIndex", groupIndex)
         let groupRestrictions = groups[groupIndex].restrictions
-        console.log(groupRestrictions)
         if (groupRestrictions) {
             return isGroupRestricted(host, groupRestrictions, siteRestrictions)
         }
