@@ -22,12 +22,11 @@ li {
     margin-right: .5em;
 }
 
-
 summary#menu {
     padding: .2em 1em;
     font-weight: 500;
 }
-summary#menu, #settings {
+summary#menu {
     list-style-type: none;
     display : flex;
     cursor : pointer;
@@ -59,6 +58,10 @@ li.selected {
 li a {
     color : var(--text);
     text-decoration: none;
+}
+#settings a {
+    display : flex;
+    justify-items: center;
 }
 
 @media screen and (min-width: 768px) {

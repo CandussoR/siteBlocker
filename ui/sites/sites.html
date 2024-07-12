@@ -2,18 +2,25 @@
 <html>
     <head>
         <title>Your sites</title>
-        <link rel="stylesheet" href="../../base.css"/>
+        <link rel="stylesheet" href="../css/base.css"/>
+        <link rel="stylesheet" href="../css/aside.css"/>
+        <link rel="stylesheet" href="../css/navbar.css"/>
         <link rel="stylesheet" href="sites.css"/>
         <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     </head>
     <body>
-        <aside>
-            <nav id="app-nav">
-                <h1>Menu</h1>
-                <a href="../sites/sites.html" class="selected">Your sites</a>
-                <a href="../groups/groups.html">Your groups</a>
-                <a href="../settings/settings.html">Settings</a>
-            </nav>
+        <aside id="nav">
+            <ul>
+                <details class="menu">
+                    <summary id="menu"><span class="material-symbols-outlined">menu</span>Menu
+                    </summary>
+                    <ul id="nav">
+                        <li class="selected"> <a href="../sites/sites.html">Sites</a> </li>
+                        <li> <a href="../groups/groups.html">Groups</a> </li>
+                        <li id="settings"><a href="../settings/settings.html"><span class="material-symbols-outlined">settings</span>Settings</a></li>
+                    </ul>
+                </details>
+            </ul>
         </aside>
 
         <main>
@@ -35,7 +42,6 @@
             </nav>
         </aside>
 
-
-
         <script src="site-list.js" type="module"></script>
+        <script src="../common/aside.js" type="module"></script>
 </html>

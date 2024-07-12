@@ -186,12 +186,12 @@ async function checkToggleAudible(site) {
 
 
 async function bookkeepConsecutiveTime(site, siteRecord) {
-  if (siteRecord.initDate 
-    && !siteRecord.audible 
-    && !siteRecord.focused) {
-      siteRecord.consecutiveTime = Math.round( (Date.now() - siteRecord.initDate) / 1000);
-      chrome.alarms.create(`${site}-consecutive-time-restriction-check`, {delayInMinutes : 2 })
-      chrome.alarms.clear(`${site}-consecutive-time-restriction-begin`)
+  if (siteRecord.initDate && !siteRecord.audible && !siteRecord.focused)
+   {
+    let { consecutiveTimeReset } = await chrome.storage.local.get( "consecutiveTimeReset");
+    siteRecord.consecutiveTime = Math.round( (Date.now() - siteRecord.initDate) / 1000);
+    chrome.alarms.create(`${site}-consecutive-time-restriction-check`, { delayInMinutes: consecutiveTimeReset, });
+    chrome.alarms.clear(`${site}-consecutive-time-restriction-begin`); 
   }
   return siteRecord
 }

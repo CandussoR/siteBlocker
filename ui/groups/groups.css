@@ -2,3 +2,13 @@ body {
     display: grid;
     grid-template-columns: 15% auto 15%;
 }
+
+@media (max-width: 768px) {
+    body {
+        display: block;
+    }
+
+    aside#group-menu {
+        display: none;
+    }
+}
