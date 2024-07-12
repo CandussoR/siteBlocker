@@ -1,0 +1,45 @@
+.error {
+    display: none;
+    color : red;
+    font-weight: 400;
+}
+
+form {
+    margin : auto;
+    width: 75%;
+    line-height: 1.5em;
+}
+
+div#button-row {
+    display : flex;
+    width:fit-content;
+    margin : 2em auto 0;
+}
+
+input#submit {
+    margin-right: 2em;
+    background-color: var(--accent);
+    font-weight: 600;
+}
+
+input#submit:hover, button:hover {
+    scale: 1.15;
+}
+input#submit:hover {
+    box-shadow: .5em .25em .25em var(--secondary40);
+}
+button:hover {
+    box-shadow: .5em .25em .25em var(--primary40);
+}
+
+form input#submit, button {
+    border-radius: 5px;
+    padding: .8em 1.6em;
+    margin: 2em;
+    border: 1px solid;
+    font-variant: small-caps;
+}
+
+button {
+    background-color: var(--primary20);
+}
