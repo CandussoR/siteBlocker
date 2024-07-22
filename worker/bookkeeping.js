@@ -119,9 +119,10 @@ export async function handleAudibleEnd(site, siteRecord) {
 
     if ('consecutiveTime' in siteRecord) {
       siteRecord = await bookkeepConsecutiveTime(site, siteRecord)
+    } else {
+      siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000 );
     }
 
-    siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000 );
     siteRecord.initDate = null;
   }
 
@@ -131,21 +132,23 @@ export async function handleAudibleEnd(site, siteRecord) {
 
 export async function handleNoFocus(todayRecord) {
     for (let site of Object.keys(todayRecord)) {
+      todayRecord[site].focused = false;
+
       if (todayRecord[site].audible) {
         todayRecord[site].focused = false;
         continue;
       }
 
-      if (todayRecord[site].initDate) {
-        
-        if ('consecutiveTime' in todayRecord[site]) {
-          todayRecord[site] = await bookkeepConsecutiveTime(site, todayRecord[site])
-        }
+      if (todayRecord[site].initDate && !('consecutiveTime' in todayRecord[site])) { 
         todayRecord[site].totalTime += Math.round( (Date.now() - todayRecord[site].initDate) / 1000 );
-        todayRecord[site].initDate = null;
       }
 
-      todayRecord[site].focused = false;
+      if ('consecutiveTime' in todayRecord[site]) {
+        todayRecord[site] = await bookkeepConsecutiveTime(site, todayRecord[site])
+      }
+
+      todayRecord[site].initDate = null;
+      
     }
     return todayRecord
 }
@@ -184,14 +187,44 @@ async function checkToggleAudible(site) {
   return true;
 }
 
-
 async function bookkeepConsecutiveTime(site, siteRecord) {
-  if (siteRecord.initDate && !siteRecord.audible && !siteRecord.focused)
-   {
-    let { consecutiveTimeReset } = await chrome.storage.local.get( "consecutiveTimeReset");
-    siteRecord.consecutiveTime = Math.round( (Date.now() - siteRecord.initDate) / 1000);
-    chrome.alarms.create(`${site}-consecutive-time-restriction-check`, { delayInMinutes: consecutiveTimeReset, });
-    chrome.alarms.clear(`${site}-consecutive-time-restriction-begin`); 
-  }
+  // Always sent here after audible and focused have been reset to false
+  // && there is a date initialised
+  console.log("in bookkeepConsecutiveTime I have received", site, siteRecord)
+  if (siteRecord.initDate && !siteRecord.audible && !siteRecord.focused) {
+      siteRecord.consecutiveTime += Math.round( (Date.now() - siteRecord.initDate) / 1000);
+
+      let {consecutiveTimeReset} = await chrome.storage.local.get('consecutiveTimeReset')
+      console.log("consecutiveTimeReset", consecutiveTimeReset)
+      let { sites = [] } = await chrome.storage.local.get('sites')
+      let todayCtRestriction = getCurrentDayRestriction(sites.find(x => x.name === site), 'consecutiveTime')
+      if (todayCtRestriction && todayCtRestriction.pause <= consecutiveTimeReset) {
+        consecutiveTimeReset = todayCtRestriction.pause
+      }
+
+      // We need to check if there is an alarm for a particular site or for a group first
+      let alarms = await chrome.alarms.getAll()
+      if (alarms.find(a => a.name === `${site}-consecutive-time-restriction-begin`)) {
+        await chrome.alarms.create(`${site}-consecutive-time-restriction-check`, { delayInMinutes: consecutiveTimeReset / 60 });
+        await chrome.alarms.clear(`${site}-consecutive-time-restriction-begin`);
+      }
+
+      let group = sites.find(x => x.name === site).group
+      if (group && alarms.find(a => a.name === `${group}-consecutive-time-restriction-begin`)) {
+        await chrome.alarms.create(`${group}-consecutive-time-restriction-check`, { delayInMinutes: consecutiveTimeReset / 60 });
+        await chrome.alarms.clear(`${group}-consecutive-time-restriction-begin`);
+      }
+    }
+
+  console.log(" now in bookkeepConsecutiveTime I have", site, siteRecord)
   return siteRecord
+}
+
+
+function getCurrentDayRestriction(item, restrictionKey) {
+  if (!item || !item.restrictions || !(restrictionKey in item.restrictions)) {
+    return undefined;
+  }
+  let currentDay = new Intl.DateTimeFormat("en-US", {"weekday" : "long"}).format(new Date());
+  return item.restrictions[restrictionKey].find(x => x.days.includes(currentDay));
 }

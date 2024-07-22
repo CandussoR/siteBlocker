@@ -21,7 +21,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 })
 
 chrome.runtime.onStartup.addListener( async () => {
-    console.log("setting busy as false before cleanup") 
+    console.log("on startup is running, alarms will be reset");
     await chrome.storage.local.set({ busy : true })
     let today = new Date().toISOString().split('T')[0] ;
     let records = await setRecords(today);
@@ -31,10 +31,10 @@ chrome.runtime.onStartup.addListener( async () => {
     }
 
     let {lastCleaned} = await chrome.storage.local.get('lastCleaned')
-    console.log("lastCleaned", lastCleaned)
     if (Object.keys(records).length === 1 || lastCleaned === today) return;
-    console.log("records must be cleaned")
     await cleanRecords(lastCleaned, records, today)
+
+    await chrome.alarms.clearAll()
     await chrome.storage.local.set({busy : false})
 
     await handleAlarms()
@@ -59,12 +59,12 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
   
 // Fires if window is focused or not
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
-  if (windowId === -1) {
+  let [tab] = await chrome.tabs.query({ active: true });
+  console.log("onFocusChanged refocused window on following tab", tab, tab.tabId, !tab.tabId)
+
+  if (windowId === -1 || !tab.tabId) {
     await processOrEnqueue('no-focus')
   } else {
-    let [tab] = await chrome.tabs.query({ active: true });
-    console.log("refocused window on following tab", tab)
-
     let restrictedSites = await getRestrictedSites();
     if (!tab.url || ["chrome://newtab/", "ui/redirected/redirected.html"].includes(tab.url)) return ;
 
@@ -82,6 +82,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       return ; 
     }
     if (["chrome://newtab/", "ui/redirected/redirected.html"].includes(changeUrl)) {
+      await processOrEnqueue('no-focus');
       return ; 
     }
 
