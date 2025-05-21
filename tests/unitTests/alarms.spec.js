@@ -127,7 +127,7 @@ describe('handleStorageChange', () => {
                     oldValue : oldSites
                 }
             }
-        let mockRecords = { records : { '2024-05-21' : { name : 'test.com', totalTime : 0} } }
+        let mockRecords = { records : { '2024-05-21' : { 'test.com' : { totalTime : 0} } } }
         global.chrome.storage.local.get.mockResolvedValueOnce(mockRecords)
         global.chrome.alarms.getAll.mockResolvedValueOnce([])
 
@@ -219,6 +219,9 @@ describe('handleStorageChange', () => {
         
         expect(global.chrome.storage.local.set).toHaveBeenCalledOnce()
         expect(global.chrome.storage.local.set).toBeCalledWith(mockRecordsResult) 
+    })
+
+    it('should not set a consecutiveTime alarm end on first arrival on site', async () => {
     })
 })
 
