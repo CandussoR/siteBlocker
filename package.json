@@ -1,8 +1,10 @@
 {
-  "devDependencies": {
-    "vitest": "^1.6.0"
+  "type": "module",
+  "scripts": {
+    "test": "vitest",
+    "coverage": "vitest run --coverage"
   },
-    "scripts": {
-      "test": "vitest"
-    }
+  "devDependencies": {
+    "vitest": "^2.0.4"
+  }
 }
