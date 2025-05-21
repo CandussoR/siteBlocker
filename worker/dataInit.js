@@ -21,5 +21,5 @@ export const template_sites = [
 ]
 
 export const daysToRecord = 30
-export const consecutiveTimeReset = 2
+export const consecutiveTimeReset = 2 * 60
 export const consecutiveTimeResetPercent = .25
