@@ -30,21 +30,33 @@ class GroupComponent extends HTMLElement {
     buildHTML() {
         this.innerHTML = `
             <div id='${this.name}'>
-                <div id='${this.name}-buttons'>
-                    <span id="edit-button" class='material-symbols-outlined'>edit</span>
-                    <span id="remove-button" class='material-symbols-outlined'>remove</span>
-                </div>
-                    <p id="${this.name}-group-name"> ${this.name} </p>
-                    <p id="g${this.name}-sites">
-                  </p>
-                  <p id="site-listing"><span class="sites-label">Sites : </span>
-                    ${this.sites.length !== 0 ? this.sites.map(s => s.name).join(', ') : 'No site yet.'}</p>
-                    </p>
+                <div id='${this.name}-title-row'>
+                    <h2 id="${this.name}-group-name"> ${this.name} </h2>
+                    <div id='${this.name}-buttons'>
+                        <span id="edit-button" class='material-symbols-outlined'>edit</span>
+                        <span id="remove-button" class='material-symbols-outlined'>remove</span>
                     </div>
+                </div>
+               <div id='${this.name}-details'>
+                    <div id='${this.name}-site-listing'>
+                        <h3 id="g${this.name}-sites">Sites</h3>
+                    <ul id="site-listing">
+                        ${this.sites.length !== 0 ? this.sites.map(s => `<li>${s.name}</li>`).join('') : 'No site yet.'}</p>
+                        </ul>
+                    </div>
+                </div> 
+            </div>
                     `
-        let div = this.querySelector(`#${this.name}`)
+
+
+        let div = this.querySelector(`#${this.name}-details`)
         if (this.restrictions) {
-            div.insertAdjacentHTML("beforeend", `<restriction-item item-type="group" restrictions='${JSON.stringify(this.restrictions)}' />`)
+            div.insertAdjacentHTML(
+                "afterbegin", 
+                `<div id='${this.name}-restrictions'>
+                    <h3>Restrictions</h3>
+                    <restriction-item item-type="group" restrictions='${JSON.stringify(this.restrictions)}' />
+                </div>`)
         }
     }
 

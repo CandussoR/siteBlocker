@@ -4,7 +4,6 @@ class SiteComponent extends HTMLElement {
     }
 
     connectedCallback() {
-        console.log("site properties", this.name, this.group, this.restrictions)
         this.innerHTML = this.buildHTML()
 
         this.querySelector('#edit-button').addEventListener('click', () => this.handleEdit())
@@ -57,10 +56,8 @@ class SiteComponent extends HTMLElement {
         let siteName = this.querySelector("[id$='-site-name']").textContent.trim()
 
         let { sites = [] } = await chrome.storage.local.get('sites')
-        console.log("sites before", sites)
         let siteIndex = sites.findIndex(s => s.name === siteName)
         sites.splice(siteIndex, 1)
-        console.log("sites after", sites)
         await chrome.storage.local.set({ sites : sites })
 
         this.remove()

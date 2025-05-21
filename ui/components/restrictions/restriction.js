@@ -84,7 +84,7 @@ class SlotTimeRestriction extends HTMLElement {
                   `<ul id='consecutive-time-${index}-days'>
                     <li>
                       <div>
-                        On ${el.days.join(", ")} :
+                        <p>On ${el.days.join(", ")} :</p>
                         <ul id='time-pause-${index}'>
                             <li>${ el.consecutiveTime / 60} consecutive minutes straight max, </li> 
                             <li>${ el.pause / 60} minutes pause between.</li>
