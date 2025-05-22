@@ -4,7 +4,11 @@ import daisyui from 'daisyui'
 export default {
   content: ["./ui/**/*.{html,js}"],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily : {
+        dancing: ["Dancing Script", "cursive"],
+      }
+    }
   },
   plugins: [daisyui],
 }

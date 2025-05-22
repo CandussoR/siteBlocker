@@ -1,17 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@500&family=Source+Code+Pro:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/dist/app.css">
     <title>Redirected</title>
 </head>
-<body>
-    <h1>Welcome to your liberated time !</h1>
+
+<body class="flex flex-col justify-center items-center min-h-screen">
+    <h1 class=" font-dancing text-4xl lg:text-7xl mb-10">Welcome to your liberated time !</h1>
     <p id="redirected"></p>
-    <p>If you see this, then you chose to restrict the website where you wanted to go.</p>
-    <p>You are free now ! Use your time for something useful and don't worry, 
-        I'm sure you'll have some time later to check this content.</p>
-    <p>Cheers !</p>
+    <p class="text-xs sm:text-base">If you see this, then you chose to restrict the website where you wanted to go.</p>
+    <p class="text-xs sm:text-base m-3">Like Dobby, <span class="text-success font-semibold">you are free now !</span></p>
+    <p class="text-xs sm:text-base">Use your time for something else : you'll have time later to check this content.</p>
+    <p class="font-dancing text-2xl lg:text-4xl mt-10">Cheers !</p>
     <script src="redirect.js" type="module"></script>
 </body>
+
 </html>
