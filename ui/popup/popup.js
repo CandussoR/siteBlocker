@@ -33,11 +33,12 @@ async function chargeDynamicHTML() {
     let deleteFromSites = document.createElement('button')
     deleteFromSites.id = 'delete-site'
     deleteFromSites.innerText = 'Delete from sites'
+    deleteFromSites.classList.add('btn', 'btn-outline', 'btn-error')
     addToSites.replaceWith(deleteFromSites)
     deleteFromSites.addEventListener('click', async () => await deleteSite())
 
     if (!filtered.group) {
-        document.getElementById('add').insertAdjacentHTML('afterbegin', '<button id="add-to-group">Add to a group</button>')
+        document.getElementById('add').insertAdjacentHTML('afterbegin', '<button id="add-to-group" class="btn btn-outline">Add to a group</button>')
         document.getElementById('add-to-group').addEventListener('click', chooseGroup)
     } else {
         document.getElementById('add').insertAdjacentHTML('afterbegin', '<button id="delete-group">Delete from group</button>')
@@ -46,7 +47,7 @@ async function chargeDynamicHTML() {
             await chrome.storage.local.set({sites : sites})
             restrictedTextContent = "This site is already restricted."
             document.getElementById('restricted').innerHTML = restrictedTextContent
-            document.getElementById('add').insertAdjacentHTML('beforeend', '<button id="add-to-group">Add to a group</button>')
+            document.getElementById('add').insertAdjacentHTML('beforeend', '<button id="add-to-group" class="btn btn-outline">Add to a group</button>')
             document.getElementById('add-to-group').addEventListener('click', chooseGroup)
             location.reload()
             return;
@@ -104,6 +105,7 @@ function replaceButtonByGroupSelectHTML(s, groups) {
 
     let select = document.createElement('select')
     select.id = 'select-group'
+    select.classList.add('select')
     select.add(new Option('--Choose a group--', ''));
 
     for (let i=0 ; i < groups.length ; i++) {
@@ -111,11 +113,11 @@ function replaceButtonByGroupSelectHTML(s, groups) {
     }
     form.appendChild(select)
 
-    form.insertAdjacentHTML('beforeend', '<div id="button-row"><input id="submit" type="submit" value="Add"/><button id="cancel">Cancel</button></div>')
+    form.insertAdjacentHTML('beforeend', '<div id="button-row"><input id="submit" class="btn btn-outline btn-accent" type="submit" value="Add"/><button id="cancel" class="btn btn-outline">Cancel</button></div>')
     
     s.replaceWith(div)
 
-    div.insertAdjacentHTML('beforeend', '<button id="create-new-group"><span class="material-symbols-outlined"> add </span> New group</button>')
+    div.insertAdjacentHTML('beforeend', '<button id="create-new-group" class="btn btn-outline btn-wide"><span class="material-symbols-outlined">add</span>New group</button>')
 
     document.getElementById('submit').addEventListener('click', async (event) => {
         event.preventDefault()
@@ -136,32 +138,16 @@ function replaceByCreateGroupButton(el) {
 
     let form = document.createElement('form')
     form.setAttribute("formenctype", "text/plain")
-
-    let label = document.createElement('label')
-    label.setAttribute("for", "new-group")
-    label.innerHTML = "Create a group : "
-    
-    let input = document.createElement('input')
-    input.type = "text"
-    input.id = "new-group"
-    input.required = true
-    
-    let submit = document.createElement('input')
-    submit.id = "create-group-button"
-    submit.type = "submit"
-    submit.value = "Create"
-    submit.accessKey = "enter"
-    
     
     el.replaceWith(div)
     div.appendChild(form)
     div.insertAdjacentHTML('afterbegin', 
         `<form formenctype="text/plain">
         <label for="new-group">Create a group : </label>
-        <input type="text" id="new-group" required="">
+        <input class="input-neutral" type="text" id="new-group" required="">
         <div id="button-row">
-            <input id="create-group-button" type="submit" value="Create" accesskey="enter">
-            <button id="cancel">Cancel</button>
+            <input id="create-group-button" class="btn btn-outline btn-accent" type="submit" value="Create" accesskey="enter">
+            <button id="cancel" class="btn btn-outline">Cancel</button>
         </div>
         </form>`)
 

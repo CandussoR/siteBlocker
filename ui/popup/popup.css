@@ -1,6 +1,6 @@
 :root {
     font-size: clamp(calc(0.9rem + .3vw), 1rem, 1.5rem);
-    --text: #040406;
+    /* --text: #040406;
     --background: #f1f3f8;
     --primary: #6285ac;
     --primary20: hsla(212, 31%, 53%, 0.2);
@@ -9,7 +9,7 @@
     --secondary20: hsl(259, 31%, 72%, 0.2);
     --secondary40: hsl(259, 31%, 72%, 0.4);
     --secondary60: hsl(259, 31%, 72%, 0.6);
-    --accent: #9f83be;
+    --accent: #9f83be; */
   }
 
 
@@ -19,7 +19,6 @@ box-sizing: border-box;
 }
 
 body {
-    background-color: var(--background);
     min-width: 300px;
     font-size: 15px;
     display: flex;
@@ -66,12 +65,12 @@ div:not(:last-child) {
     margin-bottom: 1em;
 }
 
+
 form input, button {
     border-radius: 5px;
     padding: .5em .25em;
     margin: .1em;
     border: 1px solid;
-    background-color: var(--primary20);
 }
 
 button#create-new-group {
@@ -87,13 +86,7 @@ form {
 }
 
 form input, #create-group-button {
-    background-color: var(--accent);
-    /* margin-bottom: 1em; */
     font-weight: 600;
-}
-
-form input[type='text'] {
-    background-color : #FFFFFFFF;
 }
 
 select {
@@ -103,4 +96,3 @@ select {
 label {
     font-weight: 500;
 }
-

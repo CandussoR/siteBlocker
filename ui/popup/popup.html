@@ -1,19 +1,20 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link rel="stylesheet" href="/dist/app.css">
         <link rel="stylesheet" href="popup.css">
         <link preload rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" crossorigin/>
         <title>Web Blocker</title>
     </head>
-    <body>
-        <h1 id="popup-title">Your site blocker</h1>
+    <body class="bg-neutral p-4">
+      <h1 id="popup-title" class="text-2xl font-bold">Your site blocker</h1>
         <p id="host"></p>
         <div id="add">
-          <button id="add-to-sites">Add to restricted</button>
+          <button id="add-to-sites" class="btn btn-accent">Add to restricted</button>
         </div>
         <div id="links">
-          <button id="redirect-to-sites">See my sites</button>
-          <button id="redirect-to-groups">See my groups</button>
+          <button id="redirect-to-sites" class="btn btn-outline btn-accent">See my sites</button>
+          <button id="redirect-to-groups" class="btn btn-outline btn-accent text-nowrap">See my groups</button>
         </div>
         <script src="popup.js" type="module"></script>
     </body>
