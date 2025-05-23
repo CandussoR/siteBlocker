@@ -7,6 +7,9 @@ export default {
     extend: {
       fontFamily : {
         dancing: ["Dancing Script", "cursive"],
+      },
+      colors: {
+        default: "color-mix(in oklab, var(--color-base-content) 10%, transparent)"
       }
     }
   },

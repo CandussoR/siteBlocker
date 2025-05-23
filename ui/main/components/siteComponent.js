@@ -27,18 +27,18 @@ class SiteComponent extends HTMLElement {
         this.setAttribute('restrictions', r); }
 
     buildHTML() {
-        this.innerHTML = `<div id='${this.name}'>
-                            <div id='${this.name}-title-row'>
-                                <h2 id="${this.name}-site-name"> ${this.name} </h2>
-                                <div id='${this.name}-buttons'>
+        this.innerHTML = `<div id='${this.name}' class="border-2 border-secondary flex flex-col w-full ">
+                            <div id='${this.name}-title-row' class="bg-primary flex w-full items-center justify-center relative p-3">
+                                <h2 id="${this.name}-site-name" class="font-mono font-semibold uppercase"> ${ this.name} </h2>
+                                <div id='${this.name}-buttons' class="absolute right-2 gap-2">
                                     <span id="edit-button" class='material-symbols-outlined'>edit</span>
                                     <span id="remove-button" class='material-symbols-outlined'>remove</span>
                                 </div>
                             </div>
-                            <div id='${this.name}-details'>
-                                <div id="group-name">
-                                    <h3>Group </h3>
-                                    <p>${this.group !== null && this.group !== undefined ? this.group : '--'}</p>
+                            <div id='${this.name}-details' class="<div class="flex justify-evenly items-center w-full p-3">
+                                <div id="group-name" class="flex flex-row items-center justify-center w-full p-3 gap-8">
+                                    <h3 class="font-mono uppercase">Group</h3>
+                                    <p class="font-mono uppercase font-semibold">${this.group !== null && this.group !== undefined ? this.group : '--'}</p>
                                 </div>
                             </div>
                         </div>`
@@ -47,7 +47,15 @@ class SiteComponent extends HTMLElement {
             return  this.innerHTML
         }
 
-        document.getElementById(`${this.name}-details`).insertAdjacentHTML("beforeend", `<div id='${this.name}-restrictions'><h3>Restrictions</h3><restriction-item item-type="site" restrictions=${JSON.stringify(this.restrictions)} /></div>`)
+        document
+          .getElementById(`${this.name}-details`)
+          .insertAdjacentHTML(
+            "beforeend",
+            `<div id='${ this.name }-restrictions'>
+                <h3 class="font-mono font-semibold uppercase text-center">Restrictions</h3>
+                <restriction-item item-type="site" restrictions=${JSON.stringify( this.restrictions)} />
+            </div>`
+          );
 
         return this.innerHTML
     }

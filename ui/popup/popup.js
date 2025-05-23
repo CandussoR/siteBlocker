@@ -5,14 +5,14 @@ async function chargeDynamicHTML() {
     
     document.getElementById('redirect-to-sites')
     .addEventListener('click', () => {
-        let url = chrome.runtime.getURL('ui/sites/sites.html')
+        let url = chrome.runtime.getURL('ui/main/main.html?t=s&i=0')
         chrome.tabs.create({url : url})
     })
 
     
     document.getElementById('redirect-to-groups')
     .addEventListener('click', () => {
-        let url = chrome.runtime.getURL('ui/groups/groups.html')
+        let url = chrome.runtime.getURL('ui/main/main.html?t=g&i=0')
         chrome.tabs.create({url : url})
     })
 
