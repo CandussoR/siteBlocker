@@ -43,24 +43,35 @@ class SlotTimeRestriction extends HTMLElement {
 
         if (keys.includes('timeSlot')) {
             html += `
-        <div id='time-slot-container' class="time-slot-container">
-            <h3>Time Slots</h3>
-                ${this.restrictions.timeSlot.map((element, index) => `
-                    <ul id="slot-${index}">
-                        <li id="days-${index}">
-                            <div>
-                                On ${element["days"].join(', ')} :
-                                <ul id="time-list-${index}">
-                                    ${element["time"].map((t, i) => `
-                                        <li id="time-slot-${i}">from ${t[0]} to ${t[1]}</li>
-                                    `).join('')}
-                                </ul>
-                            </div>
-                        </li>
-
-                    </ul>`).join('')}
-        </div>
-        `
+        <div id='time-slot-container'">
+            <h3 class="font-mono font-semibold uppercase p-2 m-1">Time Slots</h3>
+            <div class="flex flex-col w-full items-center justify-center mb-2">
+            <table class="w-3/4">
+              <thead>
+                <col>
+                <colgroup span="2"></colgroup>
+              <tr class="border">
+                <th rowspan="2">Days</th>
+                <th colspan="2" scope="colgroup">Restricted Slots</th>
+              </tr>
+              <tr>
+                      <th scope="col">Begin</th>
+                      <th scope="col">End</th>
+              </tr>
+              </thead>
+              <tbody>
+            ${this.restrictions.timeSlot.map((element, index) => `
+              <tr>
+                <td rowspan="${element["time"].length}">${element["days"].join(', ')}</td>
+                ${element["time"].map((t, i) => ` ${i != 0 ? `<tr>` : ''}
+                    <td scope="col">${t[0]}</td>
+                    <td scope="col">${t[1]}</td>
+              </tr>`).join('')}
+              `).join('')}
+              </tbody>
+            </table>
+            </div>
+          </div>`
         }
 
         if (keys.includes('totalTime')) {

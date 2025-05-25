@@ -5,3 +5,12 @@
 body {
     @apply text-xs sm:text-sm
 }
+table, thead, th, td {
+    @apply border
+}
+td {
+    @apply text-center
+}
+th {
+    @apply bg-info-content
+}
