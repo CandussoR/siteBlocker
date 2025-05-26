@@ -37,12 +37,13 @@ class SlotTimeRestriction extends HTMLElement {
     set itemType(t) { this.setAttribute('item-type', t) }
 
     buildHTML() {
-        let html = ``
-        let keys = Object.keys(this.restrictions) || []
-        if (keys.length === 0) return '<p>No restriction yet, click on the update icon to add one.</p>';
+        let html = ``;
+        let keys = Object.keys(this.restrictions) || [];
+        if (keys.length === 0)
+          return "<p>No restriction yet, click on the update icon to add one.</p>";
 
-        if (keys.includes('timeSlot')) {
-            html += `
+        if (keys.includes("timeSlot")) {
+          html += `
         <div id='time-slot-container'">
             <h3 class="font-mono font-semibold uppercase p-2 m-1">Time Slots</h3>
             <div class="flex flex-col w-full items-center justify-center mb-2">
@@ -60,55 +61,80 @@ class SlotTimeRestriction extends HTMLElement {
               </tr>
               </thead>
               <tbody>
-            ${this.restrictions.timeSlot.map((element, index) => `
+            ${this.restrictions.timeSlot
+              .map(
+                (element, index) => `
               <tr>
-                <td rowspan="${element["time"].length}">${element["days"].join(', ')}</td>
-                ${element["time"].map((t, i) => ` ${i != 0 ? `<tr>` : ''}
+                <td rowspan="${element["time"].length}">${element["days"].join(
+                  ", "
+                )}</td>
+                ${element["time"]
+                  .map(
+                    (t, i) => ` ${i != 0 ? `<tr>` : ""}
                     <td scope="col">${t[0]}</td>
                     <td scope="col">${t[1]}</td>
-              </tr>`).join('')}
-              `).join('')}
+              </tr>`
+                  )
+                  .join("")}
+              `
+              )
+              .join("")}
               </tbody>
             </table>
             </div>
-          </div>`
+          </div>`;
         }
 
-        if (keys.includes('totalTime')) {
-            html += `<div id="total-time-container">
-                        <h3>Total Time</h3>
-                        <ul id="total-time-list">
-                      ${this.restrictions.totalTime
-                          .map((el, index) =>
-                            `<li id="total-time-${index}">${el.totalTime / 60} minutes on ${el.days.join('')}.</li>`
-                      ).join('')}
-                        </ul>
-                     </div>`
-          }
-    
-          if (keys.includes('consecutiveTime')) {
-            html += `<div id="consecutive-time-container">
-            <h3>Consecutive Time</h3>
-            ${this.restrictions.consecutiveTime
-              .map(
-                (el, index) =>
-                  `<ul id='consecutive-time-${index}-days'>
-                    <li>
-                      <div>
-                        <p>On ${el.days.join(", ")} :</p>
-                        <ul id='time-pause-${index}'>
-                            <li>${ el.consecutiveTime / 60} consecutive minutes straight max, </li> 
-                            <li>${ el.pause / 60} minutes pause between.</li>
-                        </ul>
-                      </div>
-                    </li>
-                </ul>`)
-              .join("")}
-           </div>`;
-          }
+        if (keys.includes("totalTime")) {
+          html += `<div id="total-time-container">
+                        <h3 class="class="font-mono font-semibold uppercase p-2 m-1">Total Time</h3>
+                        <div class="flex flex-col w-full items-center justify-center mb-2">
+                          <table class="w-3/4">
+                            <thead>
+                              <th>Days</th>
+                              <th>Max time (minutes)</th>
+                            </thead>
+                            <tbody>
+                              ${this.restrictions.totalTime.map( (el, index) =>
+                                    `<tr>
+                                      <td>${el.days.join(", ")}</td>
+                                      <td>${ el.totalTime / 60 }</td>
+                                    </tr>`
+                                ) .join("")}
+                            </tbody>
+                          </table>
+                        </div>
+                     </div>`;
+        }
 
-        html += '</div>'
-        return html
+        if (keys.includes("consecutiveTime")) {
+          html += `<div id="consecutive-time-container">
+            <h3 class="font-mono font-semibold uppercase p-2 m-1">Consecutive Time</h3>
+              <div class="flex flex-col w-full items-center justify-center mb-2">
+                <table class="w-3/4">
+                  <thead>
+                    <th>Days</th>
+                    <th>Max consecutive Time (minutes)</th>
+                    <th>Pause (minutes)</th>
+                  </thead>
+                  <tbody>
+                    ${this.restrictions.consecutiveTime
+                      .map(
+                        (el, index) =>
+                          `<tr>
+                            <td>${el.days.join(", ")}</td>
+                            <td>${el.consecutiveTime / 60}</td>
+                            <td>${el.pause / 60}</td>
+                          </tr>`
+                      )
+                      .join("")}
+                  </tbody>
+                </table>
+              </div>
+           </div>`;
+        }
+        html += "</div>";
+        return html;
     }
 
     handleEdit() {
