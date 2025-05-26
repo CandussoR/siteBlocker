@@ -1,5 +1,31 @@
 import { daysToRecord as dTR, consecutiveTimeReset as cTR } from "../../worker/dataInit.js"
 
+let { sites = [] } = await chrome.storage.local.get("sites");
+let { groups = [] } = await chrome.storage.local.get("groups");
+
+createMenu(sites, groups)
+
+function createMenu(sites, groups) {
+
+  document.getElementById("settings").classList.remove('btn-ghost')
+  document.getElementById("settings").classList.add('btn-primary')
+  
+  const currentBaseUrl = location.pathname;
+  console.log(currentBaseUrl)
+  const siteUl = document.getElementById('menu-site-list')
+  for (let i=0; i < sites.length; i++) {
+    siteUl.insertAdjacentHTML('beforeend', `<li id="msl${i}"><a href="/ui/main/main.html?t=s&i=${i}">${sites[i].name}</li></a>`)
+  }
+
+  const groupUl = document.getElementById('menu-group-list')
+  for (let i=0; i < groups.length; i++) {
+    groupUl.insertAdjacentHTML('beforeend', `<li id="mgl${i}"><a href="/ui/main/main.html?t=g&i=${i}">${groups[i].name}</li></a>`)
+  }
+
+  document.querySelector('li#settings').classList.add('btn-primary')
+}
+
+
 let { daysToRecord } = await chrome.storage.local.get('daysToRecord');
 let { consecutiveTimeReset } = await chrome.storage.local.get('consecutiveTimeReset');
 document.querySelector('input#number-of-days').value = daysToRecord;
