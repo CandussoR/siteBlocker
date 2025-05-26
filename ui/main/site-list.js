@@ -1,5 +1,6 @@
 import "../components/restrictions/restriction.js"
 import './components/siteComponent.js'
+import './components/groupComponent.js'
 import './components/siteEditor.js'
 
 let { sites = [] } = await chrome.storage.local.get("sites");
@@ -9,9 +10,9 @@ const params = new URLSearchParams(window.location.search);
 const type = params.get('t');
 const ind = params.get('i');
 
+updateTitle(type)
 createMenu(sites, groups, type, ind)
-loadComponentsAndFocus(type, {'sites' : sites, 'groups' : groups }, ind)
-// listSites(sites)
+loadComponents(type, {'sites' : sites, 'groups' : groups }, ind)
 
 function createMenu(sites, groups, type, selectedIndex) {
   if (!sites && !groups) return;
@@ -30,30 +31,48 @@ function createMenu(sites, groups, type, selectedIndex) {
   const currentBaseUrl = location.pathname;
   const siteUl = document.getElementById('menu-site-list')
   for (let i=0; i < sites.length; i++) {
-    console.log("populating menu with site", sites[i])
-    siteUl.insertAdjacentHTML('beforeend', `<li id="ml${i}"><a href="${currentBaseUrl}?t=s&i=${i}">${sites[i].name}</li></a>`)
-    if (selectedIndex && i == selectedIndex) {
-      document.getElementById(`ml${i}`).classList.add('bg-primary')
+    siteUl.insertAdjacentHTML('beforeend', `<li id="msl${i}"><a href="${currentBaseUrl}?t=s&i=${i}">${sites[i].name}</li></a>`)
+    if (selectedIndex && i == selectedIndex && type == 's') {
+      document.getElementById(`msl${i}`).classList.add('bg-primary')
     }
   }
 
   const groupUl = document.getElementById('menu-group-list')
   for (let i=0; i < groups.length; i++) {
-    console.log("populating menu with group", groups[i])
-    groupUl.insertAdjacentHTML('beforeend', `<li><a href="${currentBaseUrl}?t=g&i=${i}">${groups[i].name}</li></a>`)
+    groupUl.insertAdjacentHTML('beforeend', `<li id="mgl${i}"><a href="${currentBaseUrl}?t=g&i=${i}">${groups[i].name}</li></a>`)
+    if (selectedIndex && i == selectedIndex && type == 'g') {
+      document.getElementById(`mgl${i}`).classList.add('bg-primary')
+    }
   }
 
   for (let a of document.getElementsByTagName('a')) {
-    a.addEventListener('click', (e) => updateMenu(e))
+    a.addEventListener('click', (e) => {
+      if (e.target.search) {
+        e.preventDefault()
+      }
+      console.log(e.target.search)
+      const currentSearch = new URLSearchParams(window.location.search).get("t");
+      const incomingSearch = new URLSearchParams(e.target.search);
+      if (!incomingSearch.size) {
+        history.pushState({}, '', e.target.href)
+        return
+      } else {
+      const incomingSearchType = incomingSearch.get('t');
+      updateMenu(e, currentSearch, incomingSearchType)
+
+      if (currentSearch != incomingSearchType) {
+        updateTitle(incomingSearchType)
+        loadComponents(incomingSearchType, {'sites' : sites, 'groups' : groups }, null)
+      }
+      document.getElementById(incomingSearchType == 's' ? `site-${incomingSearch.get('i')}` :`group-${incomingSearch.get('i')}`).focus()
+    }
+  })
   }
 }
 
-function updateMenu(e) {
-      e.preventDefault();
-
+function updateMenu(e, currentSearch, incomingSearch) {
+      console.log("need to update menu!", e.target.search)
       // Switching headers highlighting if necessary
-      const currentSearch = new URLSearchParams(window.location.search).get("t");
-      const incomingSearch = new URLSearchParams(e.target.search).get("t");
       if (currentSearch != incomingSearch) {
         document .querySelector(`summary#${currentSearch}-summary`).classList.remove("btn-primary")
         document .querySelector(`summary#${currentSearch}-summary`).classList.add("btn-ghost")
@@ -69,19 +88,20 @@ function updateMenu(e) {
       history.pushState({}, '', e.target.href)
 }
 
+function updateTitle(incomingSearch) {
+  document.querySelector('h1#top').innerHTML = incomingSearch == 's' ? 'Your sites' : 'Your groups'
+}
 
-function loadComponentsAndFocus(type, elements, focusedElementIndex) {
+function loadComponents(type, elements, focusedElementIndex) {
   type == 's' ? listSites(elements) : listGroups(elements)
 }
 
 function listSites(sitesAndGroups) {
-//   // let { sites = [] } = await chrome.storage.local.get("sites");
-//   let { groups = [] } = await chrome.storage.local.get("groups");
 
   let { sites, groups } = sitesAndGroups;
-  console.log(sites, groups)
 
-  let div = document.getElementById("site-list");
+  let div = document.getElementById("element-list");
+  div.textContent = ''
 
   if (sites.length === 0) {
     div.insertAdjacentHTML(
@@ -97,9 +117,8 @@ function listSites(sitesAndGroups) {
       : "";
     div.insertAdjacentHTML(
       "beforeend",
-      `<a-site id='s-{0}' index='${i}' name='${sites[i].name}' ${group} ${restrictions}><a-site/>`
+      `<a-site id="site-${i}" tabindex = '${i}' index='${i}' name='${sites[i].name}' ${group} ${restrictions}><a-site/>`
     );
-    // document.getElementById('s-' + i).addEventListener('click', (e) => focusOn('site', e.id));
   }
 
   document.addEventListener("edition", () => {
@@ -114,6 +133,37 @@ function listSites(sitesAndGroups) {
   });
 }
 
+function listGroups(sitesAndGroups) {
+    let { sites, groups } = sitesAndGroups;
+    let div = document.getElementById('element-list')
+    console.log("div.textContent", div.textContent)
+    div.textContent = ''
+    for (let i = 0 ; i < groups.length ; i++) {
+        console.log(groups[i].restrictions)
+        let restrictions = groups[i].restrictions ? `restrictions='${JSON.stringify(groups[i].restrictions)}'` : ''
+        div.insertAdjacentHTML("beforeend", `<a-group id="group-${i}" tabindex="${i}" index="${i}" name="${groups[i].name}" ${restrictions}/>`)
+        document.getElementById(`group-${i}`).addEventListener('delete-group', async (e) => await confirmDeleteGroup(e.target.index))
+    }
+}
+
+async function confirmDeleteGroup(index) {
+    let { groups = [] } = await chrome.storage.local.get('groups')
+    
+    if (confirm('Are you sure you want to delete this group?')) {
+        let group = groups.splice(index, 1)[0];
+
+        let {sites = [] } = await chrome.storage.local.get('sites')
+        for (let s of sites) {
+            if (s.group && s.group === group.name) delete s.group
+        }
+        await chrome.storage.local.set({sites : sites})
+
+        await chrome.storage.local.set({ groups: groups });
+
+        listGroups(groups);
+    }
+}    
+
 
 // window.onhashchange = () => {
 //   let all = document.querySelectorAll('.site-menu-item')
@@ -125,7 +175,3 @@ function listSites(sitesAndGroups) {
 //     curr.classList.add('selected')
 //   }
 // }
-
-function listGroups(groups) {
-  console.log("Groups not yet listed")
-}
