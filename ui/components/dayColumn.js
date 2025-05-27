@@ -23,18 +23,27 @@ class DayColumn extends HTMLElement {
     set restrictionType(r) { return this.setAttribute('restrictionType', r) }
 
     buildHTML() {
-        this.innerHTML = `<div id="card-${this.index}-days" class="day-column">
-                    <h4>For days</h4>
-                    <ul id="day-list-${this.index}">
-                        ${this.tempDays
+        this.innerHTML = `<div id="card-${this.index}-days" class="flex flex-col justify-center items-center">
+                    <table class="m-4">
+                        <col></col>
+                        <col></col>
+                        <thead>
+                            <th>Days</th>
+                        </thead>
+                        <tbody id="day-list-${this.index}">
+                            ${this.tempDays
                           .map(
                             (day, i) => `
-                            <li>${day} <span id="remove-day-${i}" class='material-symbols-outlined'>remove</span></li>
+                            <tr>
+                                <td class="p-2">${day}</td>
+                                <td class="border-0"><span id="remove-day-${i}" class='btn btn-ghost btn-xs material-symbols-outlined'>remove</span></td>
+                            </tr>
                         `
                           )
                           .join("")}
-                    </ul>
-                    <span id="add-day-${this.index}" class="add-day material-symbols-outlined"> add </span>
+                        </tbody>
+                    </table>
+                    <button id="add-day-${this.index}" class="btn btn-accent btn-outline"> Add day </button>
                 </div>`
     }
 
@@ -42,17 +51,17 @@ class DayColumn extends HTMLElement {
         e.preventDefault()
         const span = e.target;
         const i = span.id.split("-").pop();
-        const ul = this.querySelector(`[id$=day-list-${i}]`)
+        const tbody = this.querySelector(`[id$=day-list-${i}]`)
     
-        const possibleDays = this.calculatePossibleDaysFrom(ul)
+        const possibleDays = this.calculatePossibleDaysFrom(tbody)
         const div = this.buildSelect(possibleDays)
         span.replaceWith(div);
 
         this.querySelector('#select-day').addEventListener("change", (event) => {
             event.preventDefault()
-            if (e.target.value === '') return;
-            this.addTempLi(this.restrictionType, ul, i)
-            this.updateSelectDays( this.querySelector('#select-day'), ul);
+            if (event.target.value === '') return;
+            this.addTempRow(this.restrictionType, tbody, i)
+            this.updateSelectDays( this.querySelector('#select-day'), tbody);
         })
 
         this.querySelector(`#done-select-${this.index}`).addEventListener('click', (e) => { this.connectedCallback(true) })
@@ -62,28 +71,29 @@ class DayColumn extends HTMLElement {
     buildSelect(possibleDays) {
         const div = document.createElement("div");
         div.innerHTML = ` 
-                <select id="select-day">
+                <select id="select-day" class="select">
                     <option value='' selected>--Choose your day--</option>
                     ${possibleDays
                       .map( (d, i) =>
                           `<option value=${d}>${d}</option>`
                       ) .join("")}
                 </select>
-                <div id="day-column-editor__cta">
-                    <button id="done-select-${this.index}">Done</button>
-                    <button id="cancel-select-${this.index}">Cancel</button>
+                <div id="day-column-editor__cta" class="flex gap-7 justify-center align-center">
+                    <button id="done-select-${this.index}" class="btn btn-accent btn-outline">Done</button>
+                    <button id="cancel-select-${this.index}" class="btn">Cancel</button>
                 </div> `;
         return div
     }
 
     calculatePossibleDaysFrom(ul) {
         const days = [ "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-        const presentDays = [...ul.getElementsByTagName("li")]
+        const presentDays = [...ul.getElementsByTagName("td")]
           .filter((e) => e.firstChild.data !== undefined)
           .map((e) => e.firstChild.data.trim());
 
         return days.filter((x) => !presentDays.includes(x));
     }
+
 
     updateSelectDays(select, ul) {
         let possibleDays = this.calculatePossibleDaysFrom(ul)
@@ -97,28 +107,19 @@ class DayColumn extends HTMLElement {
                         ) .join("")}`)
     }
 
-    addTempLi(type, ul, i) {
+    addTempRow(type, tbody, i) {
         let select = document.getElementById("select-day")
         let selectedDay = select.options[select.selectedIndex].value;
         this.tempDays.push(selectedDay);
-        this.dispatchEvent(new CustomEvent('daysUpdate', { detail : {restrictionType : type, ul: ul, i: i, days : this.tempDays}, bubbles : true }))
+        this.dispatchEvent(new CustomEvent('daysUpdate', { detail : {restrictionType : type, ul: tbody, i: i, days : this.tempDays}, bubbles : true }))
     
-        let listItem = document.createElement('li');
-        listItem.textContent = selectedDay;
-        let removeButton = document.createElement('span');
-        removeButton.classList.add('material-symbols-outlined');
-        removeButton.textContent = 'remove';
-        removeButton.id = `remove-day-${i}`;
-        listItem.appendChild(removeButton);
-        
-        ul.appendChild(listItem);
-        
-        removeButton.addEventListener('click', (e) => this.removeDay(e));
+        tbody.insertAdjacentHTML('beforeend', `<tr><td>${selectedDay} <span id="remove-day-${i}" class='btn btn-ghost material-symbols-outlined'>remove</span></td>`)
+        document.getElementById(`remove-day-${i}`).addEventListener('click', (e) => this.removeDay(e));
     }
 
     removeDay(e) {
-        let iLi = e.target.id.split("-").pop();
-        this.tempDays.splice(iLi, 1);
+        let iTd = e.target.id.split("-").pop();
+        this.tempDays.splice(iTd, 1);
 
         this.dispatchEvent(
           new CustomEvent("daysUpdate", {

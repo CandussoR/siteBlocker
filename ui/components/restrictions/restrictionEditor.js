@@ -47,11 +47,11 @@ class RestrictionEditor extends HTMLElement {
 
   buildHTML() {
     let keys = Object.keys(this.tempRestrictions)
-    let html = `<div id="restrictions-container">
-    <h2> Restrictions </h2>
-    <div id='new-restriction'>
+    let html = `<div id="restrictions-container" class="flex flex-col w-full">
+    <h2 class="font-mono uppercase my-5 text-center"> Restrictions </h2>
+    <div id='new-restriction' class="mb-5 flex justify-center align-center gap-3 md:gap-7 ">
       <label for='select-restriction'>New restriction card : </label>
-      <select id="select-restriction" name='select-restriction'>
+      <select id="select-restriction" name='select-restriction' class="select">
         <option value='' selected>--Choose a restriction--</option>
         <option value='timeSlot'>Time Slots</option>
         <option value='totalTime'>Total Time</option>
@@ -67,7 +67,7 @@ class RestrictionEditor extends HTMLElement {
 
     if (keys.includes('timeSlot')) {
       html += `
-      <div id='time-slot-container'>
+      <div id='time-slot-container' class="flex flex-col w-full gap-5">
           <h3>Time Slots</h3>
         ${this.tempRestrictions.timeSlot
           .map(
@@ -79,7 +79,6 @@ class RestrictionEditor extends HTMLElement {
       }
 
       if (keys.includes('totalTime')) {
-        console.log("yep I found a totalTime constraint")
         html += `<div id='total-time-container'>
           <h3>Total Time</h3>
           ${this.tempRestrictions.totalTime
