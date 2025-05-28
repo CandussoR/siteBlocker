@@ -33,14 +33,35 @@ class ConsecutiveTimeRestrictionEditor extends HTMLElement {
     set pause(p) { this.setAttribute("pause", p); }
 
     buildHTML() {
-        return `<div class="card">
-                    <span id='delete-card-${ this.index }' class='material-symbols-outlined'> delete </span>
-                    <day-column index='${this.index}' days='${JSON.stringify(this.temp.days)}' restrictionType='consecutiveTime'></day-column>
-                    <div class='time-input-column'>
-                        <label for='consecutive-time-${this.index}'>Max time straight :</label>
-                        <input id='consecutive-time-${this.index}' type='number' value='${ this.temp.consecutiveTime / 60 }' minimum='0' />
-                        <label for='pause-${this.index}'>Pause :</label>
-                        <input id='pause-${this.index}' type='number' value='${ this.temp.pause / 60 }' minimum = '0' />
+        return `<div class="flex flex-col w-full items-center justify-center mb-2 bg-base-300 p-4">
+                    <div class="flex flex-col md:flex-row size-fit justify-around">
+                        <day-column index='${this.index}' days='${JSON.stringify(this.temp.days)}' restrictionType='consecutiveTime'></day-column>
+                        
+                        <div class="grow flex flex-col mr-2 items-center">
+                            <table class="table-auto w-30 m-4">
+                                <tbody>
+                                    <tr>
+                                        <th class="text-wrap">Consecutive Time (m)</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <input class="input" id='consecutive-time-${this.index}' type='number' value='${ this.temp.consecutiveTime / 60 }' minimum='1' />
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th class="text-wrap">Pause (minutes)</th>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <input class="input" id='pause-${this.index}' type='number' value='${ this.temp.pause / 60 }' minimum = '1' />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <button id="delete-card-${this.index}" class="btn btn-error btn-outline m-4">
+                            <span class="material-symbols-outlined">delete</span>
+                        </button>
                     </div>
                 </div>`;
     }
@@ -54,7 +75,6 @@ class ConsecutiveTimeRestrictionEditor extends HTMLElement {
   setTimeInSeconds(e) {
     let inputKey = e.target.id.split('-')[0] === 'pause' ? 'pause' : 'consecutiveTime';
     this.temp[inputKey] = e.target.value;
-    console.log('inputKey', inputKey)
 
     if (this.temp.pause === 0) return;
     

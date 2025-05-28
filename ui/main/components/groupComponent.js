@@ -33,16 +33,15 @@ class GroupComponent extends HTMLElement {
                 <div id='${this.name}-title-row' class="bg-primary flex w-full items-center justify-center relative p-3">
                     <h2 id="${this.name}-group-name" class="font-mono font-semibold uppercase"> ${this.name} </h2>
                     <div id='${this.name}-buttons' class="absolute right-2 gap-2">
-                        <span id="edit-button" class='material-symbols-outlined'>edit</span>
-                        <span id="remove-button" class='material-symbols-outlined'>remove</span>
+                        <span id="edit-button" class='material-symbols-outlined hover:cursor-pointer'>edit</span>
+                        <span id="remove-button" class='material-symbols-outlined hover:cursor-pointer'>remove</span>
                     </div>
                 </div>
-               <div id='${this.name}-details' class="class="flex justify-evenly items-center w-full p-3">
-                    <div id='${this.name}-site-listing'>
-                        <h3 id="g${this.name}-sites" class="font-mono font-semibold uppercase text-center">Sites</h3>
-                    <ul id="site-listing">
-                        ${this.sites.length !== 0 ? this.sites.map(s => `<li>${s.name}</li>`).join('') : 'No site yet.'}</p>
-                        </ul>
+                <div id='${this.name}-details' class="class="flex items-center w-full p-3">
+
+                <h3 id="g${this.name}-sites" class="font-mono font-semibold uppercase text-center mt-5">Sites</h3>
+                    <p id="site-listing" class="text-center p-4 w-3/4 mx-auto">
+                        ${this.sites.length !== 0 ? this.sites.map(s => `${s.name}`).join(', ') : 'No site yet.'}</p>
                     </div>
                 </div> 
             </div>
@@ -54,7 +53,7 @@ class GroupComponent extends HTMLElement {
             div.insertAdjacentHTML(
                 "afterbegin", 
                 `<div id='${this.name}-restrictions'>
-                    <h3 class="font-mono font-semibold uppercase text-center">Restrictions</h3>
+                    <h3 class="font-mono font-semibold uppercase text-center mt-3">Restrictions</h3>
                     <restriction-item item-type="group" restrictions='${JSON.stringify(this.restrictions)}' />
                 </div>`)
         }

@@ -31,11 +31,11 @@ class SiteComponent extends HTMLElement {
                             <div id='${this.name}-title-row' class="bg-primary flex w-full items-center justify-center relative p-3">
                                 <h2 id="${this.name}-site-name" class="font-mono font-semibold uppercase"> ${ this.name} </h2>
                                 <div id='${this.name}-buttons' class="absolute right-2 gap-2">
-                                    <span id="edit-button" class='material-symbols-outlined'>edit</span>
-                                    <span id="remove-button" class='material-symbols-outlined'>remove</span>
+                                    <span id="edit-button" class='material-symbols-outlined hover:cursor-pointer'>edit</span>
+                                    <span id="remove-button" class='material-symbols-outlined hover:cursor'>remove</span>
                                 </div>
                             </div>
-                            <div id='${this.name}-details' class="<div class="flex justify-evenly items-center w-full p-3">
+                            <div id='${this.name}-details'>
                                 <div id="group-name" class="flex flex-row items-center justify-center w-full p-3 gap-8">
                                     <h3 class="font-mono uppercase">Group</h3>
                                     <p class="font-mono uppercase font-semibold">${this.group !== null && this.group !== undefined ? this.group : '--'}</p>

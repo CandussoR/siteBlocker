@@ -44,7 +44,7 @@ class SlotTimeRestriction extends HTMLElement {
 
         if (keys.includes("timeSlot")) {
           html += `
-        <div id='time-slot-container'">
+        <div id='time-slot-container'>
             <h3 class="font-mono font-semibold uppercase p-2 m-1">Time Slots</h3>
             <div class="flex flex-col w-full items-center justify-center mb-2">
             <table class="w-3/4">
@@ -56,8 +56,8 @@ class SlotTimeRestriction extends HTMLElement {
                 <th colspan="2" scope="colgroup">Restricted Slots</th>
               </tr>
               <tr>
-                      <th scope="col">Begin</th>
-                      <th scope="col">End</th>
+                <th scope="col">Begin</th>
+                <th scope="col">End</th>
               </tr>
               </thead>
               <tbody>
@@ -87,7 +87,7 @@ class SlotTimeRestriction extends HTMLElement {
 
         if (keys.includes("totalTime")) {
           html += `<div id="total-time-container">
-                        <h3 class="class="font-mono font-semibold uppercase p-2 m-1">Total Time</h3>
+                        <h3 class="font-mono font-semibold uppercase p-2 m-1">Total Time</h3>
                         <div class="flex flex-col w-full items-center justify-center mb-2">
                           <table class="w-3/4">
                             <thead>

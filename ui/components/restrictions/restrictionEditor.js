@@ -79,7 +79,7 @@ class RestrictionEditor extends HTMLElement {
       }
 
       if (keys.includes('totalTime')) {
-        html += `<div id='total-time-container'>
+        html += `<div id='total-time-container' class="my-5">
           <h3>Total Time</h3>
           ${this.tempRestrictions.totalTime
             .map((element, index) => `<total-time-restriction-editor index='${index}' days='${JSON.stringify(element.days)}' totalTime='${JSON.stringify(element.totalTime)}'></total-time-restriction-editor>`)
@@ -91,7 +91,7 @@ class RestrictionEditor extends HTMLElement {
       if (keys.includes('consecutiveTime')) {
         console.log("consecutiveTime");
 
-        html += `<div id="consecutive-time-container">
+        html += `<div id="consecutive-time-container" class="my-5">
           <h3>Consecutive Time</h3>
         ${this.tempRestrictions.consecutiveTime
           .map(

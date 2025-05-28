@@ -37,10 +37,25 @@ class totalTimeRestrictionEditor extends HTMLElement {
   }
 
   buildHTML() {
-    return `<div class="card">
-                <span id='delete-card-${ this.index }' class='material-symbols-outlined'> delete </span>
+    return `<div class="flex flex-col w-full items-center justify-center mb-2 bg-base-300 p-4">
+                    <div class="flex flex-col md:flex-row size-fit justify-around">
                 <day-column index='${this.index}' days='${JSON.stringify( this.temp.days)}' restrictionType='totalTime'></day-column>
-                <input id='total-time-${this.index}' type='number' value='${ this.temp.totalTime / 60 }' minimum='0' />
+                <div class="grow flex flex-col mr-2 items-center">
+                <table class="table-auto m-4">
+                  <thead>
+                    <th>Total time (minutes)</th>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <input class="input w-full" id='total-time-${this.index}' type='number' value='${ this.temp.totalTime / 60 }' minimum='0' />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                </div>
+                <button id='delete-card-${ this.index }' class='btn btn-error btn-outline m-4'><span class="material-symbols-outlined"> delete </span></button>
+              </div>
             </div>`;
   }
 
