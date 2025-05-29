@@ -1,16 +1,54 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@plugin "daisyui";
+
+
+@plugin "daisyui/theme" {
+  name: "custom";
+  default: true;
+  prefersdark: false;
+  color-scheme: "light";
+  --color-base-100: oklch(98.68% 0.006 170.45);
+  --color-base-200: oklch(97% 0 0);
+  --color-base-300: oklch(92% 0 0);
+  --color-base-content: oklch(20% 0 0);
+  --color-primary: #47cc9a;
+  --color-primary-content: oklch(25% 0.092 26.042);
+  --color-secondary: #90dfe0;
+  --color-secondary-content: oklch(28% 0.141 291.089);
+  --color-accent: #60bed3;
+  --color-accent-content: oklch(28% 0.109 3.907);
+  --color-neutral: #040d09;
+  --color-neutral-content: oklch(98% 0 0);
+  --color-info: oklch(58% 0.158 241.966);
+  --color-info-content: oklch(97% 0.013 236.62);
+  --color-success: oklch(60% 0.118 184.704);
+  --color-success-content: oklch(98% 0.014 180.72);
+  --color-warning: oklch(66% 0.179 58.318);
+  --color-warning-content: oklch(98% 0.022 95.277);
+  --color-error: oklch(58% 0.253 17.585);
+  --color-error-content: oklch(96% 0.015 12.422);
+  --radius-selector: 1rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.5rem;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 1;
+  --noise: 1;
+}
 
 body {
     @apply text-xs sm:text-sm
 }
-table, thead, th, td {
-    @apply border
+th {
+    @apply py-1
 }
-td {
+td, th {
     @apply text-center
 }
 th {
-    @apply bg-info-content
+    @apply bg-secondary
+}
+h2, h3 {
+    @apply font-mono font-semibold uppercase
 }
