@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
+@theme {
+    --font-dancing: "Dancing Script", "cursive";
+}
 
 @plugin "daisyui/theme" {
   name: "custom";
