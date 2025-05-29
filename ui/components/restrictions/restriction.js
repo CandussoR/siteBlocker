@@ -51,7 +51,7 @@ class SlotTimeRestriction extends HTMLElement {
               <thead>
                 <col>
                 <colgroup span="2"></colgroup>
-              <tr class="border">
+              <tr>
                 <th rowspan="2">Days</th>
                 <th colspan="2" scope="colgroup">Restricted Slots</th>
               </tr>
@@ -65,15 +65,26 @@ class SlotTimeRestriction extends HTMLElement {
               .map(
                 (element, index) => `
               <tr>
-                <td rowspan="${element["time"].length}">${element["days"].join(
+                <td class="border-b border-dashed" rowspan="${element["time"].length}">${element["days"].join(
                   ", "
                 )}</td>
                 ${element["time"]
                   .map(
-                    (t, i) => ` ${i != 0 ? `<tr>` : ""}
+                    (t, i) => {
+                      if (i == 0) {
+                        return `<td scope="col">${t[0]}</td>
+                    <td scope="col">${t[1]}</td>
+              </tr>`} else if (i == element["time"].length - 1) {
+                        return `<tr class="border-b border-dashed">
+                    <td scope="col">${t[0]}</td>
+                    <td scope="col">${t[1]}</td>
+              </tr>`} else {
+                return `<tr>
                     <td scope="col">${t[0]}</td>
                     <td scope="col">${t[1]}</td>
               </tr>`
+              }
+            }
                   )
                   .join("")}
               `

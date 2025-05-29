@@ -157,6 +157,10 @@ export async function isGroupRestricted(
             todayGroupRestriction,
             todaySiteRestriction
           );
+    // DEBUG 
+    if (restricted) {
+      console.log("group has been restricted from", restrictionsName[i], todayGroupRestriction, todaySiteRestriction)
+    }
     i++;
   }
 

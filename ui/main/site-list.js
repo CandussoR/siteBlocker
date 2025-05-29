@@ -33,7 +33,7 @@ function createMenu(sites, groups, type, selectedIndex) {
   for (let i=0; i < sites.length; i++) {
     siteUl.insertAdjacentHTML('beforeend', `<li id="msl${i}"><a href="${currentBaseUrl}?t=s&i=${i}">${sites[i].name}</li></a>`)
     if (selectedIndex && i == selectedIndex && type == 's') {
-      document.getElementById(`msl${i}`).classList.add('bg-primary')
+      document.getElementById(`msl${i}`).classList.add('bg-primary', 'rounded-lg')
     }
   }
 
@@ -41,7 +41,7 @@ function createMenu(sites, groups, type, selectedIndex) {
   for (let i=0; i < groups.length; i++) {
     groupUl.insertAdjacentHTML('beforeend', `<li id="mgl${i}"><a href="${currentBaseUrl}?t=g&i=${i}">${groups[i].name}</li></a>`)
     if (selectedIndex && i == selectedIndex && type == 'g') {
-      document.getElementById(`mgl${i}`).classList.add('bg-primary')
+      document.getElementById(`mgl${i}`).classList.add('bg-primary', 'rounded-lg')
     }
   }
 
@@ -81,8 +81,8 @@ function updateMenu(e, currentSearch, incomingSearch) {
       }
 
       // Switching colors between old and new
-      document.querySelector('li.bg-primary').classList.remove('bg-primary')
-      e.target.parentElement.classList.add('bg-primary');
+      document.querySelector('li.bg-primary').classList.remove('bg-primary', 'rounded-lg')
+      e.target.parentElement.classList.add('bg-primary', 'rounded-lg');
 
       // Updating the URL without reload
       history.pushState({}, '', e.target.href)

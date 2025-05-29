@@ -43,7 +43,7 @@ class GroupEditor extends HTMLElement {
                   <input class="input" name="group-name" type="text" value="${ this.tempGroup.name }" id="group-name">
                 </div>
                 <h3 class="sites-label mt-5 text-center">Sites</h3>
-                <div id="group-sites" class="flex flex-col md:flex-row md:justify-around gap-8">
+                <div id="group-sites" class="flex flex-col md:flex-row gap-8 justify-center">
                     <ul id="sites-in-group" class="list bg-base-100 rounded-box shadow-md size-fit"></ul>
                     <button id="add-site" class="material-symbols-outlined btn btn-accent btn-outline self-center">add</button>
                 </div>
@@ -61,9 +61,11 @@ class GroupEditor extends HTMLElement {
         this.createSiteSelect()
       } else {
         let list =`${this.sites.map((s,i) => `
-                  <li id="site-${i}" class="list-row relative">
+                  <li id="site-${i}" class="list-row grid-cols-[1fr_auto] items-center">
+                    <div>
                     ${s} 
-                    <div class="absolute right-0">
+                    </div>
+                    <div>
                       <button id="remove-site-${i}" class='material-symbols-outlined btn btn-square btn-ghost'>remove</span>
                     </div>
                   </li>`).join("")}`

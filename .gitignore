@@ -8,3 +8,5 @@ node_modules/
 /blob-report/
 /playwright/.cache/
 .vite/vitest/results.json
+dist/app.css
+ui/assets/arrow_upward.svg

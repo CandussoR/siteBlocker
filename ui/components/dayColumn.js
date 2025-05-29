@@ -28,7 +28,7 @@ class DayColumn extends HTMLElement {
                         <col></col>
                         <col></col>
                         <thead>
-                            <th>Days</th>
+                            <th colspan="2">Days</th>
                         </thead>
                         <tbody id="day-list-${this.index}">
                             ${this.tempDays

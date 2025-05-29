@@ -27,9 +27,9 @@ class SiteComponent extends HTMLElement {
         this.setAttribute('restrictions', r); }
 
     buildHTML() {
-        this.innerHTML = `<div id='${this.name}' class="border-2 border-secondary flex flex-col w-full ">
-                            <div id='${this.name}-title-row' class="bg-primary flex w-full items-center justify-center relative p-3">
-                                <h2 id="${this.name}-site-name" class="font-mono font-semibold uppercase"> ${ this.name} </h2>
+        this.innerHTML = `<div id='${this.name}' class="flex flex-col w-3-4 rounded-lg shadow-xl">
+                            <div id='${this.name}-title-row' class="flex w-full items-center justify-center relative p-3 rounded-t-lg">
+                                <h2 id="${this.name}-site-name" class="font-mono font-semibold uppercase text-2xl"> ${ this.name} </h2>
                                 <div id='${this.name}-buttons' class="absolute right-2 gap-2">
                                     <span id="edit-button" class='material-symbols-outlined hover:cursor-pointer'>edit</span>
                                     <span id="remove-button" class='material-symbols-outlined hover:cursor'>remove</span>

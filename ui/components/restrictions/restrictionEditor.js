@@ -49,7 +49,7 @@ class RestrictionEditor extends HTMLElement {
     let keys = Object.keys(this.tempRestrictions)
     let html = `<div id="restrictions-container" class="flex flex-col w-full">
     <h2 class="font-mono uppercase my-5 text-center"> Restrictions </h2>
-    <div id='new-restriction' class="mb-5 flex justify-center align-center gap-3 md:gap-7 ">
+    <div id='new-restriction' class="mb-5 flex justify-center items-center gap-3 md:gap-7 ">
       <label for='select-restriction'>New restriction card : </label>
       <select id="select-restriction" name='select-restriction' class="select">
         <option value='' selected>--Choose a restriction--</option>
