@@ -32,7 +32,7 @@ class SiteComponent extends HTMLElement {
                                 <h2 id="${this.name}-site-name" class="font-mono font-semibold uppercase text-2xl"> ${ this.name} </h2>
                                 <div id='${this.name}-buttons' class="absolute right-2 gap-2">
                                     <span id="edit-button" class='material-symbols-outlined hover:cursor-pointer'>edit</span>
-                                    <span id="remove-button" class='material-symbols-outlined hover:cursor'>remove</span>
+                                    <span id="remove-button" class='material-symbols-outlined hover:cursor-pointer'>remove</span>
                                 </div>
                             </div>
                             <div id='${this.name}-details'>
@@ -63,12 +63,14 @@ class SiteComponent extends HTMLElement {
     async handleRemove() {
         let siteName = this.querySelector("[id$='-site-name']").textContent.trim()
 
-        let { sites = [] } = await chrome.storage.local.get('sites')
-        let siteIndex = sites.findIndex(s => s.name === siteName)
-        sites.splice(siteIndex, 1)
-        await chrome.storage.local.set({ sites : sites })
+        if (confirm(`Are you sure you want to delete ${siteName}?`)) {
+            let { sites = [] } = await chrome.storage.local.get('sites')
+            let siteIndex = sites.findIndex(s => s.name === siteName)
+            sites.splice(siteIndex, 1)
+            await chrome.storage.local.set({ sites : sites })
 
-        this.remove()
+            this.remove()
+        }
     }
 
     handleEdit() {

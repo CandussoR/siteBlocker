@@ -1,3 +1,4 @@
+import { updateMenuGroups } from '../../common/menu.js'
 import '../../components/restrictions/restrictionEditor.js'
 import './siteComponent.js'
 
@@ -8,14 +9,14 @@ class SiteEditor extends HTMLElement {
     
     connectedCallback() {
         this.dispatchEvent(new Event('edition', { bubbles: true, composed: true }))
+        console.log(this.getAttribute('groups'), typeof(this.getAttribute('groups')))
 
-        console.log("restrictions", this.restrictions)
         this.temp = {"name" : this.name, "group" : this.group, "restrictions" : this.restrictions}
         this.innerHTML = this.buildHTML()
 
         this.querySelector('#site-name').addEventListener('change', (e) => { this.temp.name = e.target.value })
         this.querySelector('#group-select').addEventListener('change', (e) => this.modifyGroupName(e))
-        this.querySelector('#add-group').addEventListener('click', () => this.renderCreateGroup())
+        this.querySelector('#add-group').addEventListener('click', (e) => this.renderCreateGroup(e))
         this.querySelector('form').addEventListener('submit', (event) => this.handleSubmit(event), false)
         this.querySelector('form button#cancel').addEventListener('click', () => this.handleCancel())
     }
@@ -36,57 +37,87 @@ class SiteEditor extends HTMLElement {
     }
     set restrictions(r) { this.setAttribute('restrictions', r); }
 
-    get allGroups() { return JSON.parse(this.getAttribute('groups')); }
+    get allGroups() { 
+        console.log("this.getAttribute('groups')", this.getAttribute('groups'))
+        try {
+            let g = this.getAttribute('groups');
+            return JSON.parse(g);
+            console.log("parsed successfully")
+        } catch (e) {
+            console.error(e)
+        }
+        return this.getAttribute('groups'); }
     set allGroups(g) { this.setAttribute('groups', g); }
 
     buildHTML() {
-        this.innerHTML = `<li id='${this.temp.name}'>
-                    <div id='site'>
+        this.innerHTML = `<div id='site' class="flex flex-col rounded-lg shadow-xl p-3">
                         <form id="siteForm" method="post">
-                        <div class="flex flex-col md:flex-row gap-3 md:gap-7 m-5">
-                            <label for="site-name"> Host : </label>
+                        <div class="flex flex-col md:flex-row gap-3 md:gap-7 m-5 items-center">
+                            <label for="site-name" class="font-mono font-semibold uppercase"> Host : </label>
                             <input name="site-name" class="input focus:input-primary" type="text" value="${this.temp.name}" id="site-name">
                         </div>
-                        <div id="group-name" class="flex flex-col md:flex-row gap-3 md:gap-7 m-5">
-                            <label for="group-select" class="group-label">Group : </label>
-                                <select id="group-select" class="select">
+                        <div id="group-name" class="flex flex-col md:flex-row gap-3 md:gap-7 m-5 items-center">
+                            <label for="group-select" class="font-mono font-semibold uppercase">Group : </label>
+                                <select id="group-select" name="group-select" class="select">
                                     <option value="${this.temp.group ? this.temp.group : ''}" selected>${this.temp.group ? this.temp.group : "Select a group"}</option>
                                     ${this.allGroups !== null && this.allGroups !== undefined && this.allGroups.length !== 0 ? this.allGroups.map((el) => `<option value="${el}">${el}</option>`).join('') : ''}
                                 </select>
-                                <span id="add-group" class="btn material-symbols-outlined">add</span>
+                                <button id="add-group" class="btn btn-accent btn-outline" title="Add to a new group"><span class="material-symbols-outlined">add</span></button>
                         </div>
-                        <div id="submit-div" class="flex gap-7 justify-center align-center">
+                        <div id="submit-div" class="flex gap-7 justify-center align-center m-5">
                             <input id="submit" class="btn btn-accent" type="submit" value="Save modifications">
                             <button id="cancel" class="btn">Cancel</button>
                         </div>
                         </form>
-                    </div>
-                </li>`;
+                    </div>`;
         const submit = this.querySelector('form div#submit-div')
         submit.insertAdjacentHTML("beforebegin", `<restriction-editor restrictions=${ JSON.stringify(this.temp.restrictions)} />`);
         return this.innerHTML;
     }
 
-    async renderCreateGroup() {
-        let groupSelectAdd = document.getElementById("group-select-add");
+    async renderCreateGroup(e) {
+        e.preventDefault()
+        let groupSelectAdd = document.getElementById("add-group");
 
         let div = document.createElement("div");
-        div.insertAdjacentHTML( "afterbegin",
-          `<input id="group-value" type="text"> <button id="create-new-group">Add</button> <button id="cancel-group-modification">Cancel</button>`);
-        div.querySelector("#create-new-group").addEventListener("click", (e) => this.createGroup(e));
+        div.id = 'cgdiv'
+        div.classList.add('flex', 'flex-col', 'w-full', 'justify-center')
+        div.insertAdjacentHTML("afterbegin",
+          `<div class="flex gap-7 justify-center items-center w-full">
+            <label for="new-group" class="font-mono font-semibold uppercase">New group name : </label>
+            <input id="group-value" class="input" type="text" minsize="1" required>
+            </div>
+            <div class="w-full flex justify-center items-center gap-7 p-2">
+            <button id="create-new-group" class="btn btn-accent">Add site to group</button> <button id="cancel-group-modification" class="btn">Cancel</button>
+            </div>`);
+        div.querySelector("#create-new-group").addEventListener("click", (e) => this.createGroupAndAddSite(e));
         div.querySelector("#cancel-group-modification").addEventListener("click", () => { div.replaceWith(groupSelectAdd); });
 
-        groupSelectAdd.replaceWith(div);
+        e.target.closest('div').after(div);
+        groupSelectAdd.classList.add('invisible')
     }
 
-    async createGroup(e) {
+    async createGroupAndAddSite(e) {
         e.preventDefault()
         let newGroup = document.getElementById('group-value').value
-        let allGroups = this.allGroups || []
-        allGroups.push({"name" : newGroup, "restrictions" : {}})
-        await chrome.storage.local.set({ groups : allGroups })
-        this.temp.group = newGroup.name
-        this.buildHTML()
+        let { groups } = await chrome.storage.local.get('groups')
+        groups.push({"name" : newGroup, "restrictions" : null})
+        await chrome.storage.local.set({ groups : groups })
+        updateMenuGroups(groups)
+        this.temp.group = newGroup
+        this.setAttribute('groups', JSON.stringify(groups.map(x => x.name)))
+        this.updateHTMLAfterNewGroup()
+    }
+
+    updateHTMLAfterNewGroup() {
+        const select = document.getElementById('group-select')
+        select.innerText = ''
+        select.insertAdjacentHTML("afterbegin",
+                                    `<option value="${this.temp.group ? this.temp.group : ''}" selected>${this.temp.group ? this.temp.group : "Select a group"}</option>
+                                    ${this.allGroups !== null && this.allGroups !== undefined && this.allGroups.length !== 0 ? this.allGroups.map((el) => `<option value="${el}">${el}</option>`).join('') : ''}`
+        )
+        document.getElementById('cgdiv').remove();
+        document.getElementById("add-group").classList.remove('invisible');
     }
 
     modifyGroupName(e) {
@@ -117,7 +148,9 @@ class SiteEditor extends HTMLElement {
         const s = document.createElement("a-site");
         s.setAttribute("name", site.name);
         s.setAttribute("group", site.group);
-        s.setAttribute("restrictions", JSON.stringify(site.restrictions));
+        if (site.restrictions) {
+            s.setAttribute("restrictions", JSON.stringify(site.restrictions));
+        }
         this.replaceWith(s);
     }
 

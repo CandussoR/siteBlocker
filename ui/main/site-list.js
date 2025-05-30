@@ -2,6 +2,7 @@ import "../components/restrictions/restriction.js"
 import './components/siteComponent.js'
 import './components/groupComponent.js'
 import './components/siteEditor.js'
+import { updateMenuGroups } from "../common/menu.js"
 
 let { sites = [] } = await chrome.storage.local.get("sites");
 let { groups = [] } = await chrome.storage.local.get("groups");
@@ -46,11 +47,10 @@ function createMenu(sites, groups, type, selectedIndex) {
   }
 
   for (let a of document.getElementsByTagName('a')) {
-    a.addEventListener('click', (e) => {
+    a.addEventListener('click', async (e) => {
       if (e.target.search) {
         e.preventDefault()
       }
-      console.log(e.target.search)
       const currentSearch = new URLSearchParams(window.location.search).get("t");
       const incomingSearch = new URLSearchParams(e.target.search);
       if (!incomingSearch.size) {
@@ -62,6 +62,7 @@ function createMenu(sites, groups, type, selectedIndex) {
 
       if (currentSearch != incomingSearchType) {
         updateTitle(incomingSearchType)
+        const {sites} = await chrome.storage.local.get('sites')
         loadComponents(incomingSearchType, {'sites' : sites, 'groups' : groups }, null)
       }
       document.getElementById(incomingSearchType == 's' ? `site-${incomingSearch.get('i')}` :`group-${incomingSearch.get('i')}`).focus()
@@ -71,7 +72,6 @@ function createMenu(sites, groups, type, selectedIndex) {
 }
 
 function updateMenu(e, currentSearch, incomingSearch) {
-      console.log("need to update menu!", e.target.search)
       // Switching headers highlighting if necessary
       if (currentSearch != incomingSearch) {
         document .querySelector(`summary#${currentSearch}-summary`).classList.remove("btn-primary")
@@ -81,7 +81,7 @@ function updateMenu(e, currentSearch, incomingSearch) {
       }
 
       // Switching colors between old and new
-      document.querySelector('li.bg-primary').classList.remove('bg-primary', 'rounded-lg')
+      document.querySelector('li.bg-primary')?.classList.remove('bg-primary', 'rounded-lg')
       e.target.parentElement.classList.add('bg-primary', 'rounded-lg');
 
       // Updating the URL without reload
@@ -93,11 +93,11 @@ function updateTitle(incomingSearch) {
 }
 
 function loadComponents(type, elements, focusedElementIndex) {
+  console.log("elements are", elements)
   type == 's' ? listSites(elements) : listGroups(elements)
 }
 
 function listSites(sitesAndGroups) {
-
   let { sites, groups } = sitesAndGroups;
 
   let div = document.getElementById("element-list");
@@ -112,6 +112,7 @@ function listSites(sitesAndGroups) {
 
   for (let i = 0; i < sites.length; i++) {
     let group = sites[i].group ? `group='${sites[i].group}'` : "";
+    console.log(sites[i].restrictions ? `restrictions='${JSON.stringify(sites[i].restrictions)}'` : "empty string")
     let restrictions = sites[i].restrictions
       ? `restrictions='${JSON.stringify(sites[i].restrictions)}'`
       : "";
@@ -136,7 +137,6 @@ function listSites(sitesAndGroups) {
 function listGroups(sitesAndGroups) {
     let { sites, groups } = sitesAndGroups;
     let div = document.getElementById('element-list')
-    console.log("div.textContent", div.textContent)
     div.textContent = ''
     for (let i = 0 ; i < groups.length ; i++) {
         console.log(groups[i].restrictions)
@@ -160,7 +160,10 @@ async function confirmDeleteGroup(index) {
 
         await chrome.storage.local.set({ groups: groups });
 
-        listGroups(groups);
+        const newGroups = await chrome.storage.local.get('groups')
+
+        listGroups(newGroups);
+        updateMenuGroups(newGroups.groups)
     }
 }    
 
