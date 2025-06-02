@@ -8,7 +8,10 @@ class DayColumn extends HTMLElement {
     
         this.buildHTML()
 
-        this.querySelector("[id^='add-day-']").addEventListener('click', (e) => { this.addDayInput(e) })
+        this.querySelector(`#add-day-${this.index}`).addEventListener('click', (e) => { this.addDayInput(e) })
+        if (!this.days.length && !this.tempDays.length) {
+            this.querySelector(`#add-day-${this.index}`).click()
+        }
 
         let removeButtons = this.querySelectorAll("[id^='remove-day-']")
         if (removeButtons.length === 0) return;
@@ -51,8 +54,7 @@ class DayColumn extends HTMLElement {
         e.preventDefault()
         const span = e.target;
         const i = span.id.split("-").pop();
-        const tbody = this.querySelector(`[id$=day-list-${i}]`)
-    
+        const tbody = this.querySelector(`#day-list-${i}`)
         const possibleDays = this.calculatePossibleDaysFrom(tbody)
         const div = this.buildSelect(possibleDays)
         span.replaceWith(div);
@@ -108,13 +110,13 @@ class DayColumn extends HTMLElement {
     }
 
     addTempRow(type, tbody, i) {
-        let select = document.getElementById("select-day")
+        let select = tbody.closest("day-column").querySelector('#select-day')
         let selectedDay = select.options[select.selectedIndex].value;
         this.tempDays.push(selectedDay);
         this.dispatchEvent(new CustomEvent('daysUpdate', { detail : {restrictionType : type, ul: tbody, i: i, days : this.tempDays}, bubbles : true }))
     
         tbody.insertAdjacentHTML('beforeend', `<tr><td>${selectedDay} <span id="remove-day-${i}" class='btn btn-ghost material-symbols-outlined'>remove</span></td>`)
-        document.getElementById(`remove-day-${i}`).addEventListener('click', (e) => this.removeDay(e));
+        tbody.closest("day-column").querySelector(`#remove-day-${i}`).addEventListener('click', (e) => this.removeDay(e));
     }
 
     removeDay(e) {
