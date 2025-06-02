@@ -1,4 +1,4 @@
-import './totalTimeRestriction.js'
+import './totalTimeRestrictionEditor.js'
 import './timeSlotRestrictionEditor.js'
 import './consecutiveTimeRestrictionEditor.js'
 
@@ -18,8 +18,15 @@ class RestrictionEditor extends HTMLElement {
     this.querySelector("#select-restriction").addEventListener('change', (e) => this.addNewRestriction(e))
 
     document.addEventListener('deleteCard', (e) => {
-      if (this.tempRestrictions[e.detail.restrictionType].length === 1) delete this.tempRestrictions[e.detail.restrictionType]
-      else this.tempRestrictions[e.detail.restrictionType].splice(e.detail.i, 1)
+      if (!this.tempRestrictions[e.detail.restrictionType]) {
+        return;
+      }
+      else if (this.tempRestrictions[e.detail.restrictionType].length === 1) {
+        delete this.tempRestrictions[e.detail.restrictionType]
+      }
+      else {
+        this.tempRestrictions[e.detail.restrictionType].splice(e.detail.i, 1)
+      }
     })
 
     document.addEventListener('daysUpdate', (e) => { this.tempRestrictions[e.detail.restrictionType][e.detail.i].days = e.detail.days })
@@ -32,7 +39,9 @@ class RestrictionEditor extends HTMLElement {
   }
 
   attributeChangedCallback(name, oldValue, newValue) {
-    if (name === "restrictions") {this.buildHTML();
+    if (name === "restrictions") {
+      console.log("attribute changed, calling this.build")
+      this.buildHTML();
     }
   }
 
@@ -111,6 +120,7 @@ class RestrictionEditor extends HTMLElement {
     let type = event.target.value
     let idType = this.idMapping[type]
     let titleType = this.titleMapping[type]
+
     if (keys.length === 0) {
 
       this.tempRestrictions = {}
@@ -135,6 +145,8 @@ class RestrictionEditor extends HTMLElement {
       this.updateTempRestrictions("add", type, i)
 
     }
+
+    event.target.value = ''
   }
 
   createNewRestrictionContainer(type) {
