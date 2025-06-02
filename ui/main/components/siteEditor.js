@@ -37,16 +37,7 @@ class SiteEditor extends HTMLElement {
     }
     set restrictions(r) { this.setAttribute('restrictions', r); }
 
-    get allGroups() { 
-        console.log("this.getAttribute('groups')", this.getAttribute('groups'))
-        try {
-            let g = this.getAttribute('groups');
-            return JSON.parse(g);
-            console.log("parsed successfully")
-        } catch (e) {
-            console.error(e)
-        }
-        return this.getAttribute('groups'); }
+    get allGroups() { return JSON.parse(this.getAttribute('groups')); }
     set allGroups(g) { this.setAttribute('groups', g); }
 
     buildHTML() {
