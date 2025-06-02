@@ -15,8 +15,14 @@ class TimeSlotRestrictionEditor extends HTMLElement {
         this.querySelector(`#time-list-${this.index}`).addEventListener('change', (e) => { this.handleTimeSlotUpdate(e) })
 
         let removeButtons = this.querySelectorAll("[id^='remove-time']")
-        if (!removeButtons) return ;
-        removeButtons.forEach((button) => button.addEventListener('click', (e) => this.removeTimeSlot(e)))
+        if (removeButtons) {
+            removeButtons.forEach((button) => button.addEventListener('click', (e) => { this.removeTimeSlot(e)}))
+        }
+
+        let deleteCardButtons = this.querySelectorAll("button[id^='delete-card']")
+        if (deleteCardButtons) {
+            deleteCardButtons.forEach((button) => button.addEventListener('click', async () => this.handleDelete()))
+        }
     }
 
     get index() { return this.getAttribute('index') }
@@ -68,15 +74,38 @@ class TimeSlotRestrictionEditor extends HTMLElement {
 
     
       newCard(index) {
-        this.innerHTML = `<div id="time-slot-card-${index}" class="time-slot-card">
-                    <span id="delete-card-${this.index}" class="material-symbols-outlined"> delete </span>
-                    <day-column index='${this.index}' days='${JSON.stringify(this.temp.days)}' restrictionType='timeSlot'></day-column>
-                    <div id="card-${this.index}-times" class="time-column">
-                        <h4>Restricted Slots</h4>
-                        <ul id="time-list-${this.index}"></ul>
-                        <span id="add-time-${this.index}" class="material-symbols-outlined"> add </span></li>
-                    </div>
-                </div>`
+        this.innerHTML = `<div class="flex flex-col w-full items-center justify-center mb-2 bg-base-300 p-4">
+            <div class="flex flex-col md:flex-row size-fit justify-around">
+                <day-column index='${this.index}' days='${JSON.stringify(this.temp.days)}' restrictionType='timeSlot'></day-column>
+                <div id="card-${this.index}-times" class="grow flex flex-col mr-2 items-center">
+                    <table class="table-auto w-full m-4">
+                      <colgroup span="2"></colgroup>
+                      <col></col>
+                        <thead>
+                            <tr> <th colspan="2">Restricted Slots</th></tr>
+                            <tr>
+                                <th class="w-1/2">Beginning</th>
+                                <th class="w-1/2">Ending</th>
+                            </tr>
+                        </thead>
+                        <tbody id="time-list-${this.index}">
+                            <tr id='list-item-0'>
+                            <td class="w-1/2"> <input id="time-list-0-0" class="input w-full" type="time" value=""></td>
+                            <td class="w-1/2"><input id="time-list-0-1" class="input w-full" type="time" value=""></td>
+                            <td class="border-0">
+                                <button id="remove-time-0" class="material-symbols-outlined btn btn-ghost btn-xs"> remove </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    <button id="add-time-${this.index}" class="btn btn-accent btn-outline">Add Slot</li>
+                </div>
+            <button id="delete-card-${this.index}" class="btn btn-error btn-outline m-4"><span class="material-symbols-outlined">delete</span></button>
+            </div>
+        </div>
+        `
+        this.querySelector(`#remove-time-0`).addEventListener('click', (e) => this.removeTimeSlot(e))
+
         this.connectedCallback(true)
     }
 
@@ -116,7 +145,7 @@ class TimeSlotRestrictionEditor extends HTMLElement {
         e.target.parentNode.remove()
     }
 
-
+    
     async handleDelete() {
         this.dispatchEvent(new CustomEvent('deleteCard', {detail : {restrictionType: 'timeSlot', i : this.index}, bubbles : true}))
         this.remove()
