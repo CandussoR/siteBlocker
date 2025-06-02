@@ -60,15 +60,28 @@ class totalTimeRestrictionEditor extends HTMLElement {
   }
 
   newCard(index) {
-    this.innerHTML = `<div id="total-time-card-${index}" class="total-time-card">
-        <span id="delete-card-${ this.index }" class="material-symbols-outlined"> delete </span>
-        <day-column index='${this.index}' days='${JSON.stringify( this.days)}' restrictionType='totalTime'></day-column>
-        <div id="total-time-card-${this.index}-times" class="time-column">
-            <h4>Total Time</h4>
-            <input id="total-time-${this.index}" type="number">
-        </div>
-    </div>`;
-    this.querySelector(`#total-time-${index}`).addEventListener( "change", (e) => { this.setTimeInSeconds(e); });
+    this.innerHTML = `<div class="flex flex-col w-full items-center justify-center mb-2 bg-base-300 p-4">
+                    <div class="flex flex-col md:flex-row size-fit justify-around">
+                <day-column index='${this.index}' days='[]' restrictionType='totalTime'></day-column>
+                <div class="grow flex flex-col mr-2 items-center">
+                <table class="table-auto m-4">
+                  <thead>
+                    <th>Total time (minutes)</th>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>
+                        <input class="input w-full" id='total-time-${this.index}' type='number' value='${ this.temp.totalTime / 60 || 1  }' minimum='1' />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+                </div>
+                <button id='delete-card-${this.index}' class='btn btn-error btn-outline m-4'><span class="material-symbols-outlined"> delete </span></button>
+              </div>
+            </div>`;
+    this.querySelector(`input#total-time-${index}`).addEventListener( "change", (e) => { this.setTimeInSeconds(e); });
+    this.querySelector(`button#delete-card-${index}`).addEventListener('click', async () => this.handleDelete());
   }
 
   async handleDelete() {
