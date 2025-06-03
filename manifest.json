@@ -2,7 +2,7 @@
     "manifest_version": 3,
     "name": "Website Blocker",
     "version": "0.0.1",
-    "description" : "A simple site blocker which you can use to limit the days and the time passed on certain websites, or on the internet overall.",
+    "description" : "A simple site blocker that you can use to limit the days and the time passed on certain websites.",
     "permissions": [
         "storage",
         "tabs",
