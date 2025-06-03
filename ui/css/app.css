@@ -3,6 +3,7 @@
 
 @theme {
     --font-dancing: "Dancing Script", "cursive";
+    --color-default: var(--color-default);
 }
 
 @plugin "daisyui/theme" {
@@ -38,19 +39,23 @@
   --border: 1px;
   --depth: 1;
   --noise: 1;
+  --color-default: color-mix(in oklab, var(--color-base-content) 10%, transparent);
 }
 
 body {
     @apply text-xs sm:text-sm
 }
 th {
-    @apply py-1
+    @apply p-1
 }
 td, th {
-    @apply text-center
+    @apply text-center 
+}
+td {
+    @apply p-1
 }
 th {
-    @apply bg-secondary
+    @apply bg-info
 }
 h2, h3 {
     @apply font-mono font-semibold uppercase
