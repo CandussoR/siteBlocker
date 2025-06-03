@@ -44,10 +44,11 @@ class SlotTimeRestriction extends HTMLElement {
 
         if (keys.includes("timeSlot")) {
           html += `
-        <div id='time-slot-container'>
+        <div id='time-slot-container' class="lg:w-3/4 m-auto">
             <h3 class="font-mono font-semibold uppercase p-2 m-1">Time Slots</h3>
             <div class="flex flex-col w-full items-center justify-center mb-2">
-            <table class="w-3/4">
+            <div class="w-3/4 overflow-hidden rounded-xl shadow-xl">
+            <table class="w-full table-zebra rounded-s-full">
               <thead>
                 <col>
                 <colgroup span="2"></colgroup>
@@ -60,12 +61,12 @@ class SlotTimeRestriction extends HTMLElement {
                 <th scope="col">End</th>
               </tr>
               </thead>
-              <tbody>
+              <tbody >
             ${this.restrictions.timeSlot
               .map(
                 (element, index) => `
               <tr>
-                <td class="border-b border-dashed" rowspan="${element["time"].length}">${element["days"].join(
+                <td rowspan="${element["time"].length}">${element["days"].join(
                   ", "
                 )}</td>
                 ${element["time"]
@@ -74,8 +75,8 @@ class SlotTimeRestriction extends HTMLElement {
                       if (i == 0) {
                         return `<td scope="col">${t[0]}</td>
                     <td scope="col">${t[1]}</td>
-              </tr>`} else if (i == element["time"].length - 1) {
-                        return `<tr class="border-b border-dashed">
+              </tr>`} else if (i == element["time"].length - 1 && element["time"].length > 1) {
+                        return `<tr class="shadow-xl">
                     <td scope="col">${t[0]}</td>
                     <td scope="col">${t[1]}</td>
               </tr>`} else {
@@ -93,19 +94,21 @@ class SlotTimeRestriction extends HTMLElement {
               </tbody>
             </table>
             </div>
+            </div>
           </div>`;
         }
 
         if (keys.includes("totalTime")) {
-          html += `<div id="total-time-container">
+          html += `<div id="total-time-container" class="lg:w-3/4 m-auto">
                         <h3 class="font-mono font-semibold uppercase p-2 m-1">Total Time</h3>
                         <div class="flex flex-col w-full items-center justify-center mb-2">
-                          <table class="w-3/4">
+                        <div class="w-3/4 overflow-hidden rounded-xl shadow-xl">
+                          <table class="w-full table-zebra">
                             <thead>
                               <th>Days</th>
                               <th>Max time (minutes)</th>
                             </thead>
-                            <tbody>
+                            <tbody class="shadow-xl">
                               ${this.restrictions.totalTime.map( (el, index) =>
                                     `<tr>
                                       <td>${el.days.join(", ")}</td>
@@ -114,21 +117,23 @@ class SlotTimeRestriction extends HTMLElement {
                                 ) .join("")}
                             </tbody>
                           </table>
+                          </div>
                         </div>
                      </div>`;
         }
 
         if (keys.includes("consecutiveTime")) {
-          html += `<div id="consecutive-time-container">
+          html += `<div id="consecutive-time-container" class="md:w-3/4 m-auto">
             <h3 class="font-mono font-semibold uppercase p-2 m-1">Consecutive Time</h3>
               <div class="flex flex-col w-full items-center justify-center mb-2">
-                <table class="w-3/4">
+              <div class="w-3/4 overflow-hidden rounded-xl shadow-xl">
+                <table class="w-full table-zebra">
                   <thead>
                     <th>Days</th>
                     <th>Max consecutive Time (minutes)</th>
                     <th>Pause (minutes)</th>
                   </thead>
-                  <tbody>
+                  <tbody class="shadow-xl">
                     ${this.restrictions.consecutiveTime
                       .map(
                         (el, index) =>
@@ -141,6 +146,7 @@ class SlotTimeRestriction extends HTMLElement {
                       .join("")}
                   </tbody>
                 </table>
+                </div>
               </div>
            </div>`;
         }

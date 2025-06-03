@@ -22,7 +22,9 @@ class RestrictionEditor extends HTMLElement {
         return;
       }
       else if (this.tempRestrictions[e.detail.restrictionType].length === 1) {
+        this.querySelector(`#${this.idMapping[e.detail.restrictionType]}-container`).remove()
         delete this.tempRestrictions[e.detail.restrictionType]
+
       }
       else {
         this.tempRestrictions[e.detail.restrictionType].splice(e.detail.i, 1)
@@ -40,7 +42,6 @@ class RestrictionEditor extends HTMLElement {
 
   attributeChangedCallback(name, oldValue, newValue) {
     if (name === "restrictions") {
-      console.log("attribute changed, calling this.build")
       this.buildHTML();
     }
   }
@@ -76,7 +77,7 @@ class RestrictionEditor extends HTMLElement {
 
     if (keys.includes('timeSlot')) {
       html += `
-      <div id='time-slot-container' class="flex flex-col w-full gap-5">
+      <div id='time-slot-container' class="flex flex-col w-full gap-1">
           <h3>Time Slots</h3>
         ${this.tempRestrictions.timeSlot
           .map(
@@ -88,7 +89,7 @@ class RestrictionEditor extends HTMLElement {
       }
 
       if (keys.includes('totalTime')) {
-        html += `<div id='total-time-container' class="my-5">
+        html += `<div id='total-time-container' class="flex flex-col my-5 gap-1">
           <h3>Total Time</h3>
           ${this.tempRestrictions.totalTime
             .map((element, index) => `<total-time-restriction-editor index='${index}' days='${JSON.stringify(element.days)}' totalTime='${JSON.stringify(element.totalTime)}'></total-time-restriction-editor>`)
@@ -100,7 +101,7 @@ class RestrictionEditor extends HTMLElement {
       if (keys.includes('consecutiveTime')) {
         console.log("consecutiveTime");
 
-        html += `<div id="consecutive-time-container" class="my-5">
+        html += `<div id="consecutive-time-container" class="mb-5 gap-1">
           <h3>Consecutive Time</h3>
         ${this.tempRestrictions.consecutiveTime
           .map(
