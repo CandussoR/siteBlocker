@@ -9,7 +9,6 @@ class SiteEditor extends HTMLElement {
     
     connectedCallback() {
         this.dispatchEvent(new Event('edition', { bubbles: true, composed: true }))
-        console.log(this.getAttribute('groups'), typeof(this.getAttribute('groups')))
 
         this.temp = {"name" : this.name, "group" : this.group, "restrictions" : this.restrictions}
         this.innerHTML = this.buildHTML()

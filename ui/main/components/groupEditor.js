@@ -36,10 +36,10 @@ class GroupEditor extends HTMLElement {
 
   buildHTML() {
     this.innerHTML = `
-            <div id="${this.name}-editor" class="p-4 w-full">
+            <div id="${this.name}-editor" class="p-4 w-full rounded-lg shadow-xl">
               <form id="group-form" method="post">
                 <div class="flex w-full justify-center gap-8 items-center">
-                  <label for="group-name">Name :</label>
+                  <label for="group-name" class="font-mono font-semibold uppercase">Name :</label>
                   <input class="input" name="group-name" type="text" value="${ this.tempGroup.name }" id="group-name">
                 </div>
                 <h3 class="sites-label mt-5 text-center">Sites</h3>
