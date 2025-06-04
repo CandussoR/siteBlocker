@@ -60,7 +60,6 @@ export class Logger {
   constructor() {
     this.queue = new LogQueue();
     this.timeoutId = null;
-    console.log("logger created")
   }
 
   debug(data) {
@@ -117,17 +116,30 @@ export class Logger {
 
   async flush() {
     if (!this.queue.size) {
+      this.timeoutId = null
       return;
     }
     
-    console.log("writing logger")
     const { logs = [] } = await chrome.storage.local.get("logs");
-    while (this.queue.size) {
-      logs.push(this.queue.dequeue());
+
+    // Pruning if > max_size
+    if (logs.length > 300) {
+      logs.splice(0, logs.length -1-200)
     }
+
+    const counter = this.queue.size
+    while (counter) {
+      logs.push(this.queue.dequeue());
+      --counter;
+    }
+    
     await chrome.storage.local.set({ logs: logs });
 
-    this.timeoutId = null
+    if (this.queue.size) {
+      this.timeoutId = setTimeout(async () => await this.flush(), 3000)
+    } else {
+      this.timeoutId = null
+    }
   }
 }
 
