@@ -127,12 +127,12 @@ export class Logger {
       logs.splice(0, logs.length -1-200)
     }
 
-    const counter = this.queue.size
+    let counter = this.queue.size
     while (counter) {
       logs.push(this.queue.dequeue());
       --counter;
     }
-    
+
     await chrome.storage.local.set({ logs: logs });
 
     if (this.queue.size) {
