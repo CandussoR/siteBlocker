@@ -62,53 +62,55 @@ export class Logger {
     this.timeoutId = null;
   }
 
-  debug(data) {
+  debug(...args) {
+    let log = {level : "DEBUG",
+      call : this.#getCallInfo(),
+      timestamp : new Date().toLocaleString(),
+      data : args.map(arg => typeof arg === "string" ? arg : this.#tryStringify(arg))
+    }
     this.queue.enqueue(
-      new QueueNode(
-        `[${new Intl.DateTimeFormat("fr-FR").format(
-          new Date()
-        )} : DEBUG]\n${JSON.stringify(data)}`
-      )
+      new QueueNode(log)
     );
     if (!this.timeoutId) {
         this.timeoutId = setTimeout(async () => await this.flush(), 3000)
     }
   }
 
-  info(data) {
+  info(...args) {
+    let log = {level : "INFO",
+      call : this.#getCallInfo(),
+      timestamp : new Date().toLocaleString(),
+      data : args.map(arg => typeof arg === "string" ? arg : this.#tryStringify(arg))
+    }
     this.queue.enqueue(
-      new QueueNode(
-        `[${new Intl.DateTimeFormat("fr-FR").format(
-          new Date()
-        )} : INFO]\n${JSON.stringify(data)}`
-      )
+      new QueueNode(log)
     );
     if (!this.timeoutId) {
         this.timeoutId = setTimeout(async () => await this.flush(), 3000)
     }
   }
 
-  warning(data) {
+  warning(...args) {
+    let log = {level : "WARNING",
+      timestamp : new Date().toLocaleString(),
+      data : args.map(arg => typeof arg === "string" ? arg : this.#tryStringify(arg))
+    }
     this.queue.enqueue(
-      new QueueNode(
-        `[${new Intl.DateTimeFormat("fr-FR").format(
-          new Date()
-        )} : WARNING]\n${JSON.stringify(data)}`
-      )
+      new QueueNode(log)
     );
     if (!this.timeoutId) {
         this.timeoutId = setTimeout(async () => await this.flush(), 3000)
     }
   }
 
-  error(data) {
+  error(...args) {
+    let log = {level : "ERROR",
+      timestamp : new Date().toLocaleString(),
+      data : args.map(arg => typeof arg === "string" ? arg : this.#tryStringify(arg))
+    }
     this.queue.enqueue(
-      new QueueNode(
-        `[${new Intl.DateTimeFormat("fr-FR").format(
-          new Date()
-        )} : ERROR]\n${JSON.stringify(data)}`
-      )
-    );
+      new QueueNode(log)
+    )
     if (!this.timeoutId) {
         this.timeoutId = setTimeout(async () => await this.flush(), 3000)
     }
@@ -140,6 +142,20 @@ export class Logger {
     } else {
       this.timeoutId = null
     }
+  }
+
+  #tryStringify(obj) {
+    try {
+      return JSON.stringify(obj, null, 2);
+    } catch(e) {
+      return `[STRINGIFY ERROR : unserializable object]\n  ${e}`
+    }
+  }
+
+  #getCallInfo() {
+    const err = new Error().stack
+    const spliterr = err.split("\n")[4]
+    return spliterr
   }
 }
 

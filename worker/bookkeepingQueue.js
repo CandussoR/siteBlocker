@@ -2,7 +2,6 @@ import { bookkeeping } from "./bookkeeping.js";
 
 class BookkeepingQueue {
     constructor() {
-        console.log("initialising the Queue object")
         this.queue = []
         this.lastEvent = null
     }
