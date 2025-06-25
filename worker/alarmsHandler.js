@@ -183,10 +183,6 @@ async function handleConsecutiveTimeAlarm(name) {
   let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
     new Date()
   );
-  // logger.info("Beggining of restriction for site or group");
-  let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
-    new Date()
-  );
   try {
     let data = await chrome.storage.local.get(storageKey);
     data = data[storageKey];
@@ -256,8 +252,6 @@ async function redirectTabsRestrictedByAlarm(
   sites = undefined,
   tabs,
   endOfRestriction = null
-  tabs,
-  endOfRestriction = null
 ) {
   let targets = isGroup ? sites : [name];
   logger.debug(
@@ -269,23 +263,8 @@ async function redirectTabsRestrictedByAlarm(
     "Targets for redirection is",
     targets
   );
-  logger.debug(
-    "redirectTabsRestrictedByAlarm",
-    isGroup,
-    name,
-    sites,
-    tabs,
-    "Targets for redirection is",
-    targets
-  );
 
   for (let i = 0; i < tabs.length; i++) {
-    const tab = tabs[i];
-    const url = encodeURIComponent(tab.url);
-    const host = encodeURIComponent(new URL(tab.url).host);
-    // logger.debug("url is ", url, "and host is ", host,
-    // "If host not in targets, won't redirect"
-    //  )
     const tab = tabs[i];
     const url = encodeURIComponent(tab.url);
     const host = encodeURIComponent(new URL(tab.url).host);
@@ -393,16 +372,6 @@ async function createTimeSlotAlarms(items) {
   }
 }
 
-/**
- *
- * First written to handle from handleOnStorageChange, so is either group or sites,
- * and takes every value in newChanges (all sites or all groups)
- * @param {Array} items - and array of strings (names of groups or sites)
- * @param {Object} record - current day record
- * @returns record
- */
-export async function createConsecutiveTimeAlarms(items, record) {
-  logger.debug("Asked to create an alarm for consecutiveTime", items, record);
 /**
  *
  * First written to handle from handleOnStorageChange, so is either group or sites,

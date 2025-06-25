@@ -100,10 +100,8 @@ export async function handleOpen(todayRecord, tabId, host) {
 
 export async function handleClose(todayRecord, tabId) {
 // logger.debug("handleClose coming in!")
-// logger.debug("handleClose coming in!")
   for (let site of Object.keys(todayRecord)) {
     let siteRecord = todayRecord[site];
-    
     
     if (!siteRecord.tabId || !siteRecord.tabId.includes(tabId)) {
       continue;
@@ -144,15 +142,12 @@ export async function handleClose(todayRecord, tabId) {
     }
 
     if ("consecutiveTime" in siteRecord && siteRecord.initDate) {
-    if ("consecutiveTime" in siteRecord && siteRecord.initDate) {
       siteRecord = await bookkeepConsecutiveTime(site, siteRecord);
     }
 
     siteRecord.totalTime += Math.round(
       (Date.now() - siteRecord.initDate) / 1000
     );
-
-  // logger.warning("setting initDate to null", site, siteRecord, console.trace())
 
   // logger.warning("setting initDate to null", site, siteRecord, console.trace())
     siteRecord.initDate = null;
@@ -178,17 +173,8 @@ export async function handleAudibleEnd(site, siteRecord) {
     // );
   }
 
-  if (!siteRecord.initDate) {
-  // logger.warning(
-    //   "SiteRecord has no initDate when handleAudibleEnd ! Can't bookkeep consecutive time nor total time !",
-    //   site,
-    //   siteRecord
-    // );
-  }
-
   if (!siteRecord.focused && siteRecord.initDate) {
     if ("consecutiveTime" in siteRecord) {
-     siteRecord = await bookkeepConsecutiveTime(site, siteRecord);
      siteRecord = await bookkeepConsecutiveTime(site, siteRecord);
     } else {
       siteRecord.totalTime += Math.round(
@@ -206,7 +192,6 @@ export async function handleAudibleEnd(site, siteRecord) {
 }
 
 export async function handleNoFocus(todayRecord) {
-// logger.debug("Handling no-focus")
 // logger.debug("Handling no-focus")
   for (let site of Object.keys(todayRecord)) {
     todayRecord[site].focused = false;
@@ -231,7 +216,6 @@ export async function handleNoFocus(todayRecord) {
       );
     }
 
-  // logger.warning("setting initDate to null", todayRecord[site], console.trace())
   // logger.warning("setting initDate to null", todayRecord[site], console.trace())
     todayRecord[site].initDate = null;
   }
@@ -258,7 +242,6 @@ export async function handleChangeFocus(todayRecord, host) {
       }
       s.totalTime += Math.round((Date.now() - s.initDate) / 1000);
     // logger.warning("setting initDate to null", s, console.trace())
-    // logger.warning("setting initDate to null", s, console.trace())
       s.initDate = null;
     } else {
       s.focused = false;
@@ -277,13 +260,7 @@ async function checkToggleAudible(site) {
   }
   return true;
 }
-/**
- * Handle the value of consecutiveTime in record
- * and the alarm beginning or check. Doesn't modify initDate
- * @param {*} site 
- * @param {*} siteRecord 
- * @returns 
- */
+
 /**
  * Handle the value of consecutiveTime in record
  * and the alarm beginning or check. Doesn't modify initDate
@@ -337,20 +314,6 @@ async function bookkeepConsecutiveTime(site, siteRecord) {
   if (todayCtRestriction && todayCtRestriction.pause <= consecutiveTimeReset) {
     consecutiveTimeReset = todayCtRestriction.pause;
   }
-  // Need to be careful for the reset laps :
-  // if you go back on the website in the meantime, it will be added.
-  let { consecutiveTimeReset } = await chrome.storage.local.get(
-    "consecutiveTimeReset"
-  );
-
-  let { sites = [] } = await chrome.storage.local.get("sites");
-  let todayCtRestriction = getCurrentDayRestriction(
-    sites.find((x) => x.name === site),
-    "consecutiveTime"
-  );
-  if (todayCtRestriction && todayCtRestriction.pause <= consecutiveTimeReset) {
-    consecutiveTimeReset = todayCtRestriction.pause;
-  }
 
 // logger.debug(`consecutiveTimeReset is ${consecutiveTimeReset}`);
 
@@ -374,41 +337,6 @@ async function bookkeepConsecutiveTime(site, siteRecord) {
   }
 // logger.debug(`consecutiveTimeReset is ${consecutiveTimeReset}`);
 
-  // Determine wether we set a beginning or a check alarm
-  let alarms = await chrome.alarms.getAll();
-  if (
-    alarms.find((a) => a.name === `${site}-consecutive-time-restriction-begin`)
-  ) {
-  // logger.debug(
-    //   "Creating a consecutive time restriction check alarm",
-    //   `${consecutiveTimeReset / 60} minutes delay`,
-    //   `should convert to end at ${new Date(
-    //     new Date().getTime() + consecutiveTimeReset * 1000
-    //   ).toLocaleTimeString()}`
-    // );
-
-    await chrome.alarms.create(`${site}-consecutive-time-restriction-check`, {
-      delayInMinutes: consecutiveTimeReset / 60,
-    });
-    await chrome.alarms.clear(`${site}-consecutive-time-restriction-begin`);
-  }
-
-  let group = sites.find((x) => x.name === site).group;
-  if (
-    group &&
-    alarms.find((a) => a.name === `${group}-consecutive-time-restriction-begin`)
-  ) {
-  // logger.debug(
-    //   `Creating a consecutive time restriction check alarm for ${group}`,
-    //   `${consecutiveTimeReset / 60} minutes delay`,
-    //   `should convert to end at ${new Date(
-    //     new Date().getTime() + consecutiveTimeReset * 1000
-    //   ).toLocaleTimeString()}`
-    // );
-    await chrome.alarms.create(`${group}-consecutive-time-restriction-check`, {
-      delayInMinutes: consecutiveTimeReset / 60,
-    });
-    await chrome.alarms.clear(`${group}-consecutive-time-restriction-begin`);
   let group = sites.find((x) => x.name === site).group;
   if (
     group &&
@@ -427,7 +355,6 @@ async function bookkeepConsecutiveTime(site, siteRecord) {
     await chrome.alarms.clear(`${group}-consecutive-time-restriction-begin`);
   }
 
-// logger.debug(" now in bookkeepConsecutiveTime I have", site, siteRecord);
 // logger.debug(" now in bookkeepConsecutiveTime I have", site, siteRecord);
   return siteRecord;
 }
