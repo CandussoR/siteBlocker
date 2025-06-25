@@ -4,6 +4,7 @@
 @theme {
     --font-dancing: "Dancing Script", "cursive";
     --color-default: var(--color-default);
+    --color-log: #0d1117;
 }
 
 @plugin "daisyui/theme" {

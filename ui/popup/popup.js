@@ -16,6 +16,12 @@ async function chargeDynamicHTML() {
         chrome.tabs.create({url : url})
     })
 
+    document.getElementById('redirect-to-logs')
+    .addEventListener('click', () => {
+        let url = chrome.runtime.getURL('ui/dev-logs/dev-log.html')
+        chrome.tabs.create({url : url})
+    })
+
     let { sites = [] } = await chrome.storage.local.get('sites')
     let activeTab = await chrome.tabs.query({ active: true, currentWindow: true })
     let activeTabHost = new URL(activeTab[0].url).host;    
