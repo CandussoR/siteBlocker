@@ -5,6 +5,7 @@ import {
 } from "./dataInit.js";
 import { setRecords, cleanRecords } from "./settingRecord.js";
 import "./bookkeepingQueue.js";
+import {logger} from './logger.js';
 import { processOrEnqueue } from "./blocker.js";
 import { handleAlarms } from "./alarmsHandler.js";
 
@@ -25,7 +26,6 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  console.log("on startup is running, alarms will be reset");
   await chrome.storage.local.set({ busy: true });
   let today = new Date().toISOString().split("T")[0];
   let records = await setRecords(today);
@@ -44,14 +44,14 @@ chrome.runtime.onStartup.addListener(async () => {
   await handleAlarms();
 });
 
-import { getRestrictedSites, isRestricted } from "./restrictionsHandler.js";
-
+import { getSites, isRestricted } from "./restrictionsHandler.js";
+ 
 // Fires when the active tab in a window changes.
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
   let tab = await chrome.tabs.get(activeInfo.tabId);
   console.log("changes on this tab", activeInfo);
   if (!tab.url) return;
-  let restrictedSites = await getRestrictedSites();
+  let restrictedSites = await getSites();
   let host = new URL(tab.url).host;
   if (!restrictedSites.map((x) => x.name).includes(host)) {
     await processOrEnqueue("no-focus");
@@ -73,7 +73,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   if (windowId === -1 || !tab.tabId) {
     await processOrEnqueue("no-focus");
   } else {
-    let restrictedSites = await getRestrictedSites();
+    let restrictedSites = await getSites();
     if (
       !tab.url ||
       ["chrome://newtab/", "ui/redirected/redirected.html"].includes(tab.url)
@@ -94,7 +94,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     return;
   }
   if (
-    ["chrome://newtab/", "ui/redirected/redirected.html"].includes(changeUrl)
+    changeUrl.includes("chrome://newtab/") || changeUrl.includes("ui/")
   ) {
     await processOrEnqueue("no-focus");
     return;
@@ -105,9 +105,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (!restrictPrivate) return;
   }
 
-  console.log("update", tabId, changeInfo, tab, new Date());
   let flag = "open";
-  let restrictedSites = await getRestrictedSites();
+  let restrictedSites = await getSites();
   if (!restrictedSites) return;
 
   let url = changeUrl || tab.url;
@@ -117,13 +116,14 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!restrictedSites.map((x) => x.name).includes(host)) return;
 
   if (await isRestricted(host, restrictedSites)) {
+    logger.debug("checked if isRestricted, processing close and redirecting")
     await processOrEnqueue("close", tabId, host);
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      if (message.ready && sender.tab.id === tabId) {
-        sendResponse({ url: url, host: host });
-      }
-    });
-    chrome.tabs.update(tabId, { url: "ui/redirected/redirected.html" });
+
+    logger.info(`chrome.tabs.onUpdated : should redirect tab with url ui/redirected/redirected.html?url=${url}&host=${host}`)
+    logger.warning("Redirecting but not updating site record tab id")
+    chrome.tabs.update(tabId,
+      { url: `ui/redirected/redirected.html?url=${url}&host=${host}` }
+    );
     return;
   }
 
@@ -133,6 +133,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     flag = "audible-end";
   }
 
+  logger.warning(`processOrEnqueuing ${flag} for tabId ${tabId} with host ${host}`)
   await processOrEnqueue(flag, tabId, host);
 });
 
@@ -147,6 +148,7 @@ import { handleStorageChange, handleOnAlarm } from "./alarmsHandler.js";
 chrome.storage.onChanged.addListener(async (changes, area) => {
   try {
     console.log("changes in storage", changes, area);
+    // No need to do anything with logs
     await handleStorageChange(changes, area);
   } catch (error) {
     console.error("Error handling storage change:", error);
@@ -158,6 +160,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
     await handleOnAlarm(alarm);
   } catch (error) {
-    console.log("Error handling onAlarm :", error);
+    logger.error('Error handling onAlarm : ', error);
+    await chrome.alarms.clear(alarm.name)
   }
 });
