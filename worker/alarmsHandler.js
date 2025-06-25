@@ -6,6 +6,12 @@ import {
   getSiteNamesOfGroup,
 } from "./commons.js";
 import { logger } from "./logger.js";
+import {
+  findAllTodayRestrictionsFor,
+  findTodayRestriction,
+  getSiteNamesOfGroup,
+} from "./commons.js";
+import { logger } from "./logger.js";
 
 export async function handleAlarms() {
   if (!(await alarmsAreSet())) {
@@ -18,6 +24,10 @@ async function alarmsAreSet() {
   return alarms.length !== 0;
 }
 
+/**
+ * This only creates timeSlot alarms at startUp or when restrictions updated
+ * They are the only predictable ones
+ */
 /**
  * This only creates timeSlot alarms at startUp or when restrictions updated
  * They are the only predictable ones
@@ -40,6 +50,8 @@ export async function createAlarms() {
 export async function handleStorageChange(changes, area) {
   if (
     "busy" in changes &&
+    !changes.busy.newValue &&
+    changes.busy.oldValue &&
     !changes.busy.newValue &&
     changes.busy.oldValue &&
     bookkeepingQueue.queue.length
@@ -73,11 +85,17 @@ export async function handleStorageChange(changes, area) {
   }
 
   // After a site has been added, or if no site has been added, we check if we have to add consecutiveTime or a timeSlot alarm
+  // After a site has been added, or if no site has been added, we check if we have to add consecutiveTime or a timeSlot alarm
   // Works for both groups and sites.
   let key = Object.keys(changes)[0];
   let { records = {} } = await chrome.storage.local.get("records");
   let todayRecord = records[date];
 
+  logger.info("Something has changed in either group or site.",
+    "\nThis is key", key,
+    "\nThis is changes[key].newValue :\n", changes[key].newValue,
+    "\nToday record is", todayRecord
+  )
   logger.info("Something has changed in either group or site.",
     "\nThis is key", key,
     "\nThis is changes[key].newValue :\n", changes[key].newValue,
@@ -90,10 +108,12 @@ export async function handleStorageChange(changes, area) {
   await createConsecutiveTimeAlarms(changes[key].newValue, todayRecord);
 
   logger.info("TodayRecord is now", todayRecord)
+  logger.info("TodayRecord is now", todayRecord)
   await chrome.storage.local.set({ records: records });
 }
 
 export async function handleOnAlarm(alarm) {
+  // logger.info("HandleOnAlarm : ", alarm);
   // logger.info("HandleOnAlarm : ", alarm);
   let tabs = await chrome.tabs.query({});
   let [n, r, type] = alarm.name.split("-");
@@ -119,11 +139,13 @@ export async function handleOnAlarm(alarm) {
   await redirectTabsRestrictedByAlarm(isGroup, n, sitesOfGroup, tabs);
 
   await chrome.alarms.clear(alarm.name);
+  await chrome.alarms.clear(alarm.name);
 }
 
 async function handleConsecutiveTimeAlarm(name) {
   if (!name) return;
 
+  logger.warning(`handleConsecutiveTimeAlarm with param ${name}`);
   logger.warning(`handleConsecutiveTimeAlarm with param ${name}`);
   let n = name.split("-").shift();
   let storageKey = n.includes(".") ? "sites" : "groups";
@@ -157,6 +179,10 @@ async function handleConsecutiveTimeAlarm(name) {
   }
 
   // beginning of restriction, either site or group has the restriction
+  // logger.info("Beggining of restriction for site or group");
+  let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
+    new Date()
+  );
   // logger.info("Beggining of restriction for site or group");
   let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
     new Date()
@@ -230,6 +256,8 @@ async function redirectTabsRestrictedByAlarm(
   sites = undefined,
   tabs,
   endOfRestriction = null
+  tabs,
+  endOfRestriction = null
 ) {
   let targets = isGroup ? sites : [name];
   logger.debug(
@@ -241,8 +269,23 @@ async function redirectTabsRestrictedByAlarm(
     "Targets for redirection is",
     targets
   );
+  logger.debug(
+    "redirectTabsRestrictedByAlarm",
+    isGroup,
+    name,
+    sites,
+    tabs,
+    "Targets for redirection is",
+    targets
+  );
 
   for (let i = 0; i < tabs.length; i++) {
+    const tab = tabs[i];
+    const url = encodeURIComponent(tab.url);
+    const host = encodeURIComponent(new URL(tab.url).host);
+    // logger.debug("url is ", url, "and host is ", host,
+    // "If host not in targets, won't redirect"
+    //  )
     const tab = tabs[i];
     const url = encodeURIComponent(tab.url);
     const host = encodeURIComponent(new URL(tab.url).host);
@@ -262,6 +305,14 @@ async function redirectTabsRestrictedByAlarm(
         }`
       ),
     });
+    logger.warning(`Tab ${tab.id} should be redirected from ${tab.url}`);
+    await chrome.tabs.update(tab.id, {
+      url: chrome.runtime.getURL(
+        `ui/redirected/redirected.html?url=${url}&host=${host}${
+          endOfRestriction ? "&eor=" + endOfRestriction : ""
+        }`
+      ),
+    });
   }
 }
 
@@ -269,7 +320,12 @@ async function redirectTabsRestrictedByAlarm(
  *
  * @param {Array} items
  */
+/**
+ *
+ * @param {Array} items
+ */
 async function createTimeSlotAlarms(items) {
+  // logger.debug("Create time slot alarm", items);
   // logger.debug("Create time slot alarm", items);
   const currentDay = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -332,10 +388,21 @@ async function createTimeSlotAlarms(items) {
     }`;
     logger.debug(`creating an alarms with name ${alarmName} and delay in minutes ${delay}`);
     await chrome.alarms.create(alarmName, { delayInMinutes: delay });
+    console.groupEnd();
     break;
   }
 }
 
+/**
+ *
+ * First written to handle from handleOnStorageChange, so is either group or sites,
+ * and takes every value in newChanges (all sites or all groups)
+ * @param {Array} items - and array of strings (names of groups or sites)
+ * @param {Object} record - current day record
+ * @returns record
+ */
+export async function createConsecutiveTimeAlarms(items, record) {
+  logger.debug("Asked to create an alarm for consecutiveTime", items, record);
 /**
  *
  * First written to handle from handleOnStorageChange, so is either group or sites,
@@ -362,6 +429,7 @@ export async function createConsecutiveTimeAlarms(items, record) {
 
       let groupSum = 0;
       let sites = await getSiteNamesOfGroup(items[i].name);
+      // logger.debug("Tracking sites undefined error. Sites are :", sites, sites.map((s) => record[s]))
       // logger.debug("Tracking sites undefined error. Sites are :", sites, sites.map((s) => record[s]))
       if (!sites.length) continue;
       sites.forEach((s) => {
