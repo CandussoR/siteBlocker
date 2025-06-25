@@ -1,6 +1,8 @@
+import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
 import { findTodayRestriction } from "./commons.js";
+import { logger } from './logger.js';
 
-export async function getRestrictedSites() {
+export async function getSites() {
   let { sites = [] } = await chrome.storage.local.get("sites");
   if (chrome.runtime.lastError) {
     console.error("An error occurred while fetching your settings.");
@@ -9,6 +11,12 @@ export async function getRestrictedSites() {
   return sites;
 }
 
+/**
+ * 
+ * @param {string} host - name of the site the tab is on
+ * @param {Object[]} sites - list of site objects
+ * @returns 
+ */
 export async function isRestricted(host, sites) {
   // check for alarms.
   const sitesName = sites.map((x) => x.name);
@@ -35,7 +43,6 @@ export async function isRestricted(host, sites) {
       (siteGroup && x.name.includes(siteGroup) && x.name.includes("-check")) ||
       (x.name.includes(host) && x.name.includes("-check"))
   );
-  console.log(alarmsChecks);
   for (let c of alarmsChecks) {
     await chrome.alarms.clear(c.name);
   }
@@ -45,6 +52,7 @@ export async function isRestricted(host, sites) {
     let groupIndex = groups.findIndex((g) => g.name === siteGroup);
     let groupRestrictions = groups[groupIndex].restrictions;
     if (groupRestrictions) {
+      logger.debug("checking if group is restricted")
       let groupIsRestricted = await isGroupRestricted(
         host,
         groupRestrictions,
@@ -59,6 +67,8 @@ export async function isRestricted(host, sites) {
   let { records = {} } = await chrome.storage.local.get("records");
   let date = new Date().toISOString().split("T")[0];
   let todayRecord = records[date];
+  const isRestricted = await checkIfCreateConsecutiveOrTotalTimeAlarm(host, todayRecord);
+  return isRestricted;
   if (!siteRestrictions) {
     return false;
   }
@@ -159,7 +169,12 @@ export async function isGroupRestricted(
           );
     // DEBUG 
     if (restricted) {
-      console.log("group has been restricted from", restrictionsName[i], todayGroupRestriction, todaySiteRestriction)
+      logger.debug(
+        "isGroupRestricted : group has been restricted from ",
+        restrictionsName[i],
+        todayGroupRestriction,
+        todaySiteRestriction
+      );
     }
     i++;
   }
@@ -250,17 +265,19 @@ export async function isGroupRestrictedByConsecutiveTime(
   groupRestriction,
   siteRestriction
 ) {
-  let date = new Date().toISOString().split("T")[0];
-  let groupTimeLeft = -1;
-  let siteTimeLeft = -1;
-  let alarms = await chrome.alarms.getAll();
+  logger.debug(
+    "isGroupRestrictedByConsecutiveTime",
+    host,
+    "Group restriction : ",
+    groupRestriction,
+    "Site restriction : ",
+    siteRestriction || "None"
+  );
 
-  let { records = [] } = await chrome.storage.local.get("records");
-  let todayRecord = records[date];
-
+  // Checking if already an alarm set to begin a restriction later : not restricted
   let { sites = [] } = await chrome.storage.local.get("sites");
   let groupName = sites.find((x) => x.name === host).group;
-
+  let alarms = await chrome.alarms.getAll();
   if (
     alarms.find(
       (x) =>
@@ -268,8 +285,34 @@ export async function isGroupRestrictedByConsecutiveTime(
         x.name === `${host}-consecutive-time-restriction-begin`
     )
   ) {
+    logger.debug(
+      "Found an alarm to begin the restriction later, so the site/group is probably not restricted",
+      (
+        new Date() +
+        alarms.find(
+          (x) =>
+            x.name === `${groupName}-consecutive-time-restriction-begin` ||
+            x.name === `${host}-consecutive-time-restriction-begin`
+        ).scheduledTime
+      ).toLocaleTimeString()
+    );
     return false;
   }
+
+  let date = new Date().toISOString().split("T")[0];
+
+  let groupHasRestriction = groupRestriction ? true : false;
+  let hostHasOwnRestriction = siteRestriction ? true : false;
+  if (!groupHasRestriction && !hostHasOwnRestriction) {
+    return false;
+  }
+
+  let groupTimeLeft = null;
+  let siteTimeLeft = null;
+
+  let { records = [] } = await chrome.storage.local.get("records");
+  let todayRecord = records[date];
+  logger.debug("todayRecord is", todayRecord)
 
   let sitesOfGroup = sites
     .filter((x) => x.group === groupName)
@@ -277,39 +320,58 @@ export async function isGroupRestrictedByConsecutiveTime(
 
   let totalGroupTime = 0;
   sitesOfGroup.forEach((site) => {
+    logger.debug(`Adding ${todayRecord[site].consecutiveTime} to totalTimeGroup from ${site}`)
     totalGroupTime += todayRecord[site].consecutiveTime || 0;
   });
-  if (totalGroupTime >= groupRestriction.consecutiveTime) return true;
   groupTimeLeft = groupRestriction.consecutiveTime - totalGroupTime;
+  if (totalGroupTime >= groupRestriction.consecutiveTime) {
+    logger.info(
+      `Added value of consecutive times for sites of group (${totalGroupTime})` +
+        ` > group set consecutive time (${groupRestriction.consecutiveTime}).` +
+        " Should set end of restriction alarm for the group and redirect host."
+    );
+    // groupTimeLeft = groupRestriction.consecutiveTime - totalGroupTime;
+  } else {
+    logger.debug("TotalGroupTime doesn't justify any restriction", totalGroupTime,
+      "group restriction time is", groupRestriction.consecutiveTime)
+  }
 
-  if (siteRestriction) {
+  if (hostHasOwnRestriction) {
     siteTimeLeft = timeLeftBeforeRestriction(
       todayRecord[host],
       siteRestriction,
       "consecutiveTime"
     );
-    if (!siteTimeLeft) return true;
+    if (siteTimeLeft <= 0) {
+      logger.info(`siteTimeLeft is ${siteTimeLeft} : the site is restricted and should get an end alarm`)
+      return true;
+    }
   }
 
-  if (siteTimeLeft === -1 && groupTimeLeft === -1) return false;
-
   if (
-    siteTimeLeft === -1 ||
-    (siteTimeLeft !== -1 && groupTimeLeft <= siteTimeLeft)
+    (groupHasRestriction && !hostHasOwnRestriction && groupTimeLeft <= 0) ||
+    (groupHasRestriction &&
+      hostHasOwnRestriction &&
+      groupTimeLeft <= siteTimeLeft)
   ) {
-    console.log(
-      `creating an alarm with name ${groupName}-consecutive-time-restriction-begin`
+    logger.info(
+      `siteTimeLeft is ${siteTimeLeft} and groupTimeLeft is ${groupTimeLeft}`,
+      `Creating an alarm with name ${groupName}-consecutive-time-restriction-begin`,
+      `Delay in minutes is ${groupTimeLeft / 60}`,
+      "sending True to notify group is restricted for now"
     );
     await chrome.alarms.create(
       `${groupName}-consecutive-time-restriction-begin`,
       { delayInMinutes: groupTimeLeft / 60 }
     );
   } else if (
-    groupTimeLeft === -1 ||
-    (groupTimeLeft !== -1 && siteTimeLeft < groupTimeLeft)
+    (!groupHasRestriction && hostHasOwnRestriction && siteTimeLeft <= 0) ||
+    (groupHasRestriction && hostHasOwnRestriction && siteTimeLeft < groupTimeLeft)
   ) {
-    console.log(
-      `creating an alarm with name ${groupName}-consecutive-time-restriction-begin`
+    logger.info(
+      `siteTimeLeft is ${siteTimeLeft} and groupTimeLeft is ${groupTimeLeft}`,
+      `creating an alarm with name ${host}-consecutive-time-restriction-begin`,
+      `Delay in minutes is ${siteTimeLeft / 60}`,
     );
     await chrome.alarms.create(`${host}-consecutive-time-restriction-begin`, {
       delayInMinutes: siteTimeLeft / 60,
@@ -328,7 +390,7 @@ export async function isGroupRestrictedByConsecutiveTime(
  */
 function timeLeftBeforeRestriction(hostRecord, restriction, propertyName) {
   return restriction[propertyName] < hostRecord[propertyName]
-    ? -1
+    ? 0
     : restriction[propertyName] - hostRecord[propertyName];
 }
 
