@@ -1,6 +1,11 @@
 import { bookkeepingQueue } from "./bookkeepingQueue.js";
 import { getTodayRecord } from "./bookkeeping.js";
-import { findTodayRestriction, getSiteNamesOfGroup } from "./commons.js";
+import {
+  findAllTodayRestrictionsFor,
+  findTodayRestriction,
+  getSiteNamesOfGroup,
+} from "./commons.js";
+import { logger } from "./logger.js";
 
 export async function handleAlarms() {
   if (!(await alarmsAreSet())) {
@@ -13,6 +18,10 @@ async function alarmsAreSet() {
   return alarms.length !== 0;
 }
 
+/**
+ * This only creates timeSlot alarms at startUp or when restrictions updated
+ * They are the only predictable ones
+ */
 export async function createAlarms() {
   let { groups = [] } = await chrome.storage.local.get("groups");
   let { sites = [] } = await chrome.storage.local.get("sites");
@@ -31,8 +40,8 @@ export async function createAlarms() {
 export async function handleStorageChange(changes, area) {
   if (
     "busy" in changes &&
-    changes.busy.newValue === false &&
-    changes.busy.oldValue !== false &&
+    !changes.busy.newValue &&
+    changes.busy.oldValue &&
     bookkeepingQueue.queue.length
   ) {
     bookkeepingQueue.dequeue();
@@ -63,23 +72,29 @@ export async function handleStorageChange(changes, area) {
     await chrome.storage.local.set({ records: records });
   }
 
-  // After a site has been added, of if no site has been added, we check if we have to add consecutiveTime or a timeSlot alarm
+  // After a site has been added, or if no site has been added, we check if we have to add consecutiveTime or a timeSlot alarm
   // Works for both groups and sites.
   let key = Object.keys(changes)[0];
   let { records = {} } = await chrome.storage.local.get("records");
   let todayRecord = records[date];
 
+  logger.info("Something has changed in either group or site.",
+    "\nThis is key", key,
+    "\nThis is changes[key].newValue :\n", changes[key].newValue,
+    "\nToday record is", todayRecord
+  )
   await chrome.alarms.clearAll();
 
   await createTimeSlotAlarms(changes[key].newValue);
 
   await createConsecutiveTimeAlarms(changes[key].newValue, todayRecord);
 
+  logger.info("TodayRecord is now", todayRecord)
   await chrome.storage.local.set({ records: records });
 }
 
 export async function handleOnAlarm(alarm) {
-  console.log("Hey I'm handleOnAlarm and I received this", alarm);
+  // logger.info("HandleOnAlarm : ", alarm);
   let tabs = await chrome.tabs.query({});
   let [n, r, type] = alarm.name.split("-");
   let isGroup = n.indexOf(".") === -1;
@@ -90,7 +105,6 @@ export async function handleOnAlarm(alarm) {
   }
 
   if (type === "end") {
-    chrome.runtime.sendMessage({ restriction: "ended" });
     chrome.alarms.clear(alarm.name);
     let { data = [] } = await chrome.storage.local.get(
       isGroup ? "groups" : "sites"
@@ -104,44 +118,50 @@ export async function handleOnAlarm(alarm) {
   let sitesOfGroup = isGroup ? await getSiteNamesOfGroup(n) : undefined;
   await redirectTabsRestrictedByAlarm(isGroup, n, sitesOfGroup, tabs);
 
-  chrome.alarms.clear(alarm.name);
+  await chrome.alarms.clear(alarm.name);
 }
 
 async function handleConsecutiveTimeAlarm(name) {
   if (!name) return;
 
+  logger.warning(`handleConsecutiveTimeAlarm with param ${name}`);
   let n = name.split("-").shift();
   let storageKey = n.includes(".") ? "sites" : "groups";
   let sitesOfGroup =
     storageKey === "groups" ? await getSiteNamesOfGroup(n) : undefined;
 
-  if (name.includes("-check") || name.includes("-end")) {
-    // Adding consecutiveTime to totalTime and resetting it
-    let { records = [] } = await chrome.storage.local.get("records");
-    let todayRecord = await getTodayRecord(records);
-    let sitesToUpdate = sitesOfGroup || [todayRecord[n]];
-    console.log("todayRecord before check or end", todayRecord);
-    sitesToUpdate.forEach((s) => {
-      todayRecord[s].totalTime += todayRecord[s].consecutiveTime;
-      todayRecord[s].consecutiveTime = 0;
-    });
-    console.log("todayRecord after check or end", todayRecord);
-    console.log("record after check or end", todayRecord);
-    console.log(
-      "is todayRecord in records ?",
-      records.find((x) => x === todayRecord)
-    );
-    console.log("records", records);
-    await chrome.storage.local.set({ records: records });
-    await chrome.alarms.clear(name);
-    return;
+  try {
+    // If check, means that site/group with consecutiveTime has not been visited and has to be resetted
+    if (name.includes("-check") || name.includes("-end")) {
+      logger.info(
+        `Alarm is check or end (${name}), resetting consecutive time and adding to total time`
+      );
+
+      // Adding consecutiveTime to totalTime and resetting it
+      let { records = [] } = await chrome.storage.local.get("records");
+      let todayRecord = await getTodayRecord(records);
+      let sitesToUpdate = sitesOfGroup || [todayRecord[n]];
+      // logger.info("sitesToUpdate before check or end :", sitesToUpdate);
+      sitesToUpdate.forEach((s) => {
+        todayRecord[s].totalTime += todayRecord[s].consecutiveTime;
+        todayRecord[s].consecutiveTime = 0;
+      });
+      // logger.info("resulting todayRecord :", todayRecord);
+      // logger.info("resulting records", records)
+      await chrome.storage.local.set({ records: records });
+      await chrome.alarms.clear(name);
+      return;
+    }
+  } catch (error) {
+    logger.error(error);
   }
 
   // beginning of restriction, either site or group has the restriction
+  // logger.info("Beggining of restriction for site or group");
+  let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
+    new Date()
+  );
   try {
-    let currentDay = new Intl.DateTimeFormat("en-US", {
-      weekday: "long",
-    }).format(new Date());
     let data = await chrome.storage.local.get(storageKey);
     data = data[storageKey];
 
@@ -162,7 +182,14 @@ async function handleConsecutiveTimeAlarm(name) {
       );
     }
 
+    // logger.debug("ConsecutiveTimeRestriction", consecutiveTimeRestriction)
+    let endOfRestriction = new Date();
     if (consecutiveTimeRestriction) {
+      // Adds time in milliseconds
+      endOfRestriction.setTime(
+        endOfRestriction.getTime() + consecutiveTimeRestriction.pause * 1000
+      );
+
       await chrome.alarms.create(`${n}-consecutive-time-restriction-end`, {
         delayInMinutes: consecutiveTimeRestriction.pause / 60,
       });
@@ -179,17 +206,20 @@ async function handleConsecutiveTimeAlarm(name) {
         : t.url && new URL(t.url).host === n
     );
 
-    await redirectTabsRestrictedByAlarm(
-      storageKey === "groups",
-      n,
-      sitesOfGroup,
-      tabs
-    );
+    try {
+      await redirectTabsRestrictedByAlarm(
+        storageKey === "groups",
+        n,
+        sitesOfGroup,
+        tabs,
+        endOfRestriction ? endOfRestriction.toLocaleTimeString() : null
+      );
+    } catch (error) {
+      logger.error("Error during tab redirection", error);
+    }
     await chrome.alarms.clear(name);
   } catch (error) {
-    console.error(
-      `Error when fetching ${storageKey} from chrome storage local in handleConsecutiveAlarm : ${error}`
-    );
+    logger.error(error);
   }
 }
 
@@ -197,29 +227,49 @@ async function redirectTabsRestrictedByAlarm(
   isGroup,
   name,
   sites = undefined,
-  tabs
+  tabs,
+  endOfRestriction = null
 ) {
   let targets = isGroup ? sites : [name];
+  logger.debug(
+    "redirectTabsRestrictedByAlarm",
+    isGroup,
+    name,
+    sites,
+    tabs,
+    "Targets for redirection is",
+    targets
+  );
 
   for (let i = 0; i < tabs.length; i++) {
-    let host = new URL(tabs[i].url).host;
+    const tab = tabs[i];
+    const url = encodeURIComponent(tab.url);
+    const host = encodeURIComponent(new URL(tab.url).host);
+    // logger.debug("url is ", url, "and host is ", host,
+    // "If host not in targets, won't redirect"
+    //  )
 
     if (!targets.includes(host)) {
       continue;
     }
 
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-      console.log("sender is", sender);
-      if (message.ready && sender.tab.id === tabs[i].id) {
-        sendResponse({ url: tabs[i].url, host: host });
-      }
+    logger.warning(`Tab ${tab.id} should be redirected from ${tab.url}`);
+    await chrome.tabs.update(tab.id, {
+      url: chrome.runtime.getURL(
+        `ui/redirected/redirected.html?url=${url}&host=${host}${
+          endOfRestriction ? "&eor=" + endOfRestriction : ""
+        }`
+      ),
     });
-
-    chrome.tabs.update(tabs[i].id, { url: "ui/redirected/redirected.html" });
   }
 }
 
+/**
+ *
+ * @param {Array} items
+ */
 async function createTimeSlotAlarms(items) {
+  // logger.debug("Create time slot alarm", items);
   const currentDay = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
   }).format(new Date());
@@ -279,12 +329,28 @@ async function createTimeSlotAlarms(items) {
     let alarmName = `${s.name}-time-slot-restriction-${
       index === 1 ? "end" : "begin"
     }`;
+    console.log(
+      "creating an alarms with name",
+      alarmName,
+      "and delay in minutes",
+      delay
+    );
     await chrome.alarms.create(alarmName, { delayInMinutes: delay });
+    console.groupEnd();
     break;
   }
 }
 
-async function createConsecutiveTimeAlarms(items, record) {
+/**
+ *
+ * First written to handle from handleOnStorageChange, so is either group or sites,
+ * and takes every value in newChanges (all sites or all groups)
+ * @param {Array} items - and array of strings (names of groups or sites)
+ * @param {Object} record - current day record
+ * @returns record
+ */
+export async function createConsecutiveTimeAlarms(items, record) {
+  logger.debug("Asked to create an alarm for consecutiveTime", items, record);
   let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
     new Date()
   );
@@ -301,6 +367,7 @@ async function createConsecutiveTimeAlarms(items, record) {
 
       let groupSum = 0;
       let sites = await getSiteNamesOfGroup(items[i].name);
+      // logger.debug("Tracking sites undefined error. Sites are :", sites, sites.map((s) => record[s]))
       if (!sites.length) continue;
       sites.forEach((s) => {
         if (!record[s].consecutiveTime && record[s].initDate) {
@@ -374,4 +441,223 @@ async function createConsecutiveTimeAlarms(items, record) {
   }
 
   return record;
+}
+
+/**
+ *
+ * Create a consecutive time or a total time beginnning alarm for site or group if needed
+ * Returns true if a site is restricted (alarm end) or not (alarm begin)
+ * @async
+ * @param {string|Object} [site=null] - either the name or the object, default null
+ * @param {Object} [todayRecord=null] - either the object or null
+ * @returns {boolean}
+ */
+export async function checkIfCreateConsecutiveOrTotalTimeAlarm(
+  site = null,
+  todayRecord = null
+) {
+  logger.warning("checkIfCreateConsecutiveOrTotalTimeAlarm", site, todayRecord);
+  const sites = null;
+
+  if (!site) {
+    logger.error(
+      "Cannot check the alarm to set for consecutiveTime or totalTime without site"
+    );
+    throw Error(
+      "Cannot check the alarm to set for consecutiveTime or totalTime without site"
+    );
+  }
+
+  // Insuring we always have an object or null
+  if (typeof site === "string") {
+    const { sites = [] } = await chrome.storage.local.get("sites");
+    site = sites.find((x) => x.name === site);
+  }
+
+  if (!todayRecord) {
+    const { records = [] } = await chrome.storage.local.get("records");
+    todayRecord = await getTodayRecord(records);
+  }
+
+  const { groups = [] } = await chrome.storage.local.get("groups");
+  const group = groups.find((x) => x.name === site.group);
+
+  let allSiteRestrictions = findAllTodayRestrictionsFor(site);
+  let allGroupRestrictions = findAllTodayRestrictionsFor(group);
+
+  let keys = [];
+  if (
+    (allSiteRestrictions && allSiteRestrictions.consecutiveTime) ||
+    (allGroupRestrictions && allGroupRestrictions.consecutiveTime)
+  ) {
+    keys.push("consecutiveTime");
+  }
+  if (
+    (allSiteRestrictions && allSiteRestrictions.totalTime) ||
+    (allGroupRestrictions && allGroupRestrictions.totalTime)
+  ) {
+    keys.push("totalTime");
+  }
+
+  if (!keys.length) {
+    logger.info("No need to set any alarm : no restrictions");
+    return;
+  }
+
+  let consecutiveTime = null;
+  let totalTime = null;
+  let whatItIs = null;
+  let n = null;
+
+  logger.debug("allSiteRestrictions", allSiteRestrictions,
+    "allgroupRestrictions", allGroupRestrictions)
+
+  // get site and group current consecutive time
+  let currentAlarmDelay = null;
+  for (let k of keys) {
+
+    if (site && allSiteRestrictions && k in allSiteRestrictions) {
+      currentAlarmDelay = todayRecord[site.name][k] - allSiteRestrictions[k][k];
+      n = site.name;
+      whatItIs = "site";
+    }
+
+    if (site.group && allGroupRestrictions && k in allGroupRestrictions) {
+      // Even if we have the time left for the site, need to check if the group has less time or not
+      const groupTimeLeft = await getSumOfGroupTime(
+        group,
+        k,
+        allGroupRestrictions,
+        sites,
+        todayRecord
+      );
+      if (
+        groupTimeLeft &&
+        (!currentAlarmDelay || groupTimeLeft < currentAlarmDelay)
+      ) {
+        currentAlarmDelay = groupTimeLeft;
+        n = site.group;
+        whatItIs = "group";
+      }
+    }
+
+    if (!n) continue;
+    
+    if (k === "consecutiveTime") {
+      consecutiveTime = {
+        name: `${n}-consecutive-time-restriction-begin`,
+        delayInSeconds: currentAlarmDelay,
+      };
+    } else {
+      totalTime = {
+        name: `${n}-total-time-restriction-begin`,
+        delayInSeconds: currentAlarmDelay,
+      };
+    }
+  }
+
+  if (!n) {
+    logger.info("No need for restriction apparently", allSiteRestrictions, allGroupRestrictions)
+    return false;
+  }
+
+    logger.info(
+      "Out of the loop with consecutiveTime :",
+      consecutiveTime,
+      "totalTime : ",
+      totalTime
+    );
+
+    if (consecutiveTime && consecutiveTime.delayInSeconds <= 0) {
+      let pause =
+        whatItIs === "site"
+          ? allSiteRestrictions.consecutiveTime.pause
+          : allGroupRestrictions.consecutiveTime.pause;
+      let delay =
+        (new Date(new Date().getTime() + pause * 1000) - Date.now()) /
+        1000 /
+        60;
+      await chrome.alarms.create(
+        `${consecutiveTime.name}-consecutive-time-restriction-end`,
+        { delayInMinutes: delay }
+      );
+      logger.info(
+        "Creating an alarm with name" +
+        ` ${consecutiveTime.name}-consecutive-time-restriction-end and delayInMinutes ${delay}`
+      );
+      return true;
+    } else if (totalTime && totalTime.delayInSeconds <= 0) {
+      // Should already restricted in the chrome tabs updated and will probably never activate
+      logger.debug("Should create a totalTime alarm for site", site);
+      return true;
+    }
+
+    if (consecutiveTime && totalTime) {
+      consecutiveTime.delayInSeconds <= totalTime.delayInSeconds
+        ? await chrome.alarms.create(consecutiveTime.name, {
+            delayInMinutes: consecutiveTime.delayInSeconds / 60,
+          })
+        : await chrome.alarms.create(totalTime.name, {
+            delayInMinutes: totalTime.delayInSeconds / 60,
+          });
+    } else if (consecutiveTime) {
+      logger.info(
+        `creating alarm ${consecutiveTime.name} with delayInMinutes ${
+          consecutiveTime.delayInSeconds / 60
+        }`
+      );
+      await chrome.alarms.create(consecutiveTime.name, {
+        delayInMinutes: consecutiveTime.delayInSeconds / 60,
+      });
+    } else if (totalTime) {
+      await chrome.alarms.create(totalTime.name, {
+        delayInMinutes: totalTime.delayInSeconds / 60,
+      });
+    } else {
+      logger.error(
+        `Error while setting alarm for ${site}`,
+        consecutiveTime,
+        totalTime
+      );
+    }
+    return false;
+}
+
+/**
+ * Handles time counting for group for restrictions that need it :
+ * consecutive time and total time
+ * Default null params will generate requests to storage
+ * @param {string} group - group object
+ * @param {string} k - key to search in restriction
+ * @param {Object} restriction - restriction object of group
+ * @param {Array} [sites=null] - the return of get sites.sites, default null
+ * @param {Object} [todayRecord=null] - record of the day, default null
+ * @returns {Number|null} - Number of seconds left or null if no restriction
+ */
+async function getSumOfGroupTime(
+  group,
+  k,
+  restriction,
+  sites = null,
+  todayRecord = null
+) {
+  if (!sites) {
+    const call = await chrome.storage.local.get("sites");
+    sites = call.sites || []
+  }
+  if (!todayRecord) {
+    const { records = [] } = await chrome.storage.local.get("records");
+    todayRecord = await getTodayRecord(records);
+  }
+
+  let groupSites = sites
+    .filter((x) => x.group === group.name)
+    .map((x) => x.name);
+  let timeLimit =
+    k === "consecutiveTime"
+      ? restriction.consecutiveTime[0].consecutiveTime
+      : restriction.totalTime[0].totalTime;
+  let sum = groupSites.reduce((curr, acc) => curr + todayRecord[acc][k], 0);
+
+  return timeLimit - sum;
 }
