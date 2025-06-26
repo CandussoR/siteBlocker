@@ -92,6 +92,7 @@ export class Logger {
 
   warning(...args) {
     let log = {level : "WARNING",
+      call : this.#getCallInfo(),
       timestamp : new Date().toLocaleString(),
       data : args.map(arg => typeof arg === "string" ? arg : this.#tryStringify(arg))
     }
@@ -105,6 +106,7 @@ export class Logger {
 
   error(...args) {
     let log = {level : "ERROR",
+      call : this.#getCallInfo(),
       timestamp : new Date().toLocaleString(),
       data : args.map(arg => typeof arg === "string" ? arg : this.#tryStringify(arg))
     }
@@ -153,9 +155,8 @@ export class Logger {
   }
 
   #getCallInfo() {
-    const err = new Error().stack
-    const spliterr = err.split("\n")[4]
-    return spliterr
+    const spliterr = new Error().stack?.split("\n")
+    return spliterr[spliterr.length-1]
   }
 }
 

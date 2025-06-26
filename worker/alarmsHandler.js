@@ -6,12 +6,6 @@ import {
   getSiteNamesOfGroup,
 } from "./commons.js";
 import { logger } from "./logger.js";
-import {
-  findAllTodayRestrictionsFor,
-  findTodayRestriction,
-  getSiteNamesOfGroup,
-} from "./commons.js";
-import { logger } from "./logger.js";
 
 export async function handleAlarms() {
   if (!(await alarmsAreSet())) {

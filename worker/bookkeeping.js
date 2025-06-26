@@ -1,8 +1,6 @@
 import { setRecords } from "./settingRecord.js";
 import { logger } from "./logger.js";
 import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
-import { logger } from "./logger.js";
-import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
 
 export async function bookkeeping(flag, tabId = undefined, host = undefined) {
   try {
