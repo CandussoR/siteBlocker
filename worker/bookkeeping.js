@@ -5,15 +5,10 @@ import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
 export async function bookkeeping(flag, tabId = undefined, host = undefined) {
   try {
   // logger.debug("In bookkeeping I have received", flag, tabId, host);
-  // logger.debug("In bookkeeping I have received", flag, tabId, host);
 
     let { records = [] } = await chrome.storage.local.get("records");
     let todayRecord = await getTodayRecord(records);
 
-  // logger.debug(
-    //   "todayRecord, before the switch case",
-    //   todayRecord
-    // );
   // logger.debug(
     //   "todayRecord, before the switch case",
     //   todayRecord
@@ -34,7 +29,6 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
       case "no-focus":
         todayRecord = await handleNoFocus(todayRecord);
       // logger.debug("Out of no-focus, todayRecord is:", todayRecord)
-      // logger.debug("Out of no-focus, todayRecord is:", todayRecord)
         break;
       case "change-focus":
         todayRecord = await handleChangeFocus(todayRecord, host);
@@ -42,10 +36,8 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     }
 
   // logger.debug('bookkeeping : we will set this in records : ', todayRecord);
-  // logger.debug('bookkeeping : we will set this in records : ', todayRecord);
     await chrome.storage.local.set({ records: records });
   } catch (error) {
-  // logger.error('Error in bookkeeping, avorting any change : ', error);
   // logger.error('Error in bookkeeping, avorting any change : ', error);
   }
 }
@@ -56,7 +48,6 @@ export async function getTodayRecord(records) {
   if (!todayRecord) {
     todayRecord = await setRecords(date);
   }
-  return todayRecord;
   return todayRecord;
 }
 
@@ -89,10 +80,6 @@ export async function handleOpen(todayRecord, tabId, host) {
   await checkIfCreateConsecutiveOrTotalTimeAlarm(host, todayRecord)
   logger.debug("After checkIfstuff in handleOpen")
 
-  logger.debug("Trying to set an alarm for consecutiveTime in handleopen")
-  await checkIfCreateConsecutiveOrTotalTimeAlarm(host, todayRecord)
-  logger.debug("After checkIfstuff in handleOpen")
-
   return todayRecord;
 }
 
@@ -118,15 +105,11 @@ export async function handleClose(todayRecord, tabId) {
       siteRecord.tabId.splice(tabIndex, 1);
     // logger.debug("One tab has been closed but there are more", siteRecord.tabId)
       // Check for other tabs if one of them is focused or audible before statueing on initDate, totalTime and consecutiveTime ?
-    // logger.debug("One tab has been closed but there are more", siteRecord.tabId)
-      // Check for other tabs if one of them is focused or audible before statueing on initDate, totalTime and consecutiveTime ?
     } else {
       siteRecord.tabId = null;
       siteRecord.focused = false;
       siteRecord.audible = false;
     }
-    
-    // Potentially when already out of focus and unused.
     
     // Potentially when already out of focus and unused.
     if ((siteRecord.initDate && siteRecord.audible) || !siteRecord.initDate) {
@@ -229,9 +212,6 @@ export async function handleChangeFocus(todayRecord, host) {
       if ("consecutiveTime" in s) {
         await checkIfCreateConsecutiveOrTotalTimeAlarm(host, todayRecord);
       }
-      if ("consecutiveTime" in s) {
-        await checkIfCreateConsecutiveOrTotalTimeAlarm(host, todayRecord);
-      }
       continue;
     } else if (s.focused && s.initDate && !s.audible) {
       s.focused = false;
@@ -269,20 +249,6 @@ async function checkToggleAudible(site) {
 async function bookkeepConsecutiveTime(site, siteRecord) {
   // Always sent here after audible and focused have been reset to false
   // && there is a date initialised
-// logger.debug("in bookkeepConsecutiveTime I have received", site, siteRecord);
-  if (!siteRecord.initDate) {
-  // logger.error( "Cannot bookkeep consecutiveTime without initDate", site, siteRecord);
-    return siteRecord;
-  }
-
-  if (siteRecord.audible || siteRecord.focused) {
-  // logger.info("Site is audible or focused, not doing anything");
-    return siteRecord;
-  }
-
-  siteRecord.consecutiveTime += Math.round(
-    (Date.now() - siteRecord.initDate) / 1000
-  );
 // logger.debug("in bookkeepConsecutiveTime I have received", site, siteRecord);
   if (!siteRecord.initDate) {
   // logger.error( "Cannot bookkeep consecutiveTime without initDate", site, siteRecord);

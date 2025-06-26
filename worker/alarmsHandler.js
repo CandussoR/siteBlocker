@@ -79,7 +79,6 @@ export async function handleStorageChange(changes, area) {
   }
 
   // After a site has been added, or if no site has been added, we check if we have to add consecutiveTime or a timeSlot alarm
-  // After a site has been added, or if no site has been added, we check if we have to add consecutiveTime or a timeSlot alarm
   // Works for both groups and sites.
   let key = Object.keys(changes)[0];
   let { records = {} } = await chrome.storage.local.get("records");
@@ -119,7 +118,7 @@ export async function handleOnAlarm(alarm) {
   }
 
   if (type === "end") {
-    chrome.alarms.clear(alarm.name);
+    await chrome.alarms.clear(alarm.name);
     let { data = [] } = await chrome.storage.local.get(
       isGroup ? "groups" : "sites"
     );
@@ -139,7 +138,6 @@ export async function handleOnAlarm(alarm) {
 async function handleConsecutiveTimeAlarm(name) {
   if (!name) return;
 
-  logger.warning(`handleConsecutiveTimeAlarm with param ${name}`);
   logger.warning(`handleConsecutiveTimeAlarm with param ${name}`);
   let n = name.split("-").shift();
   let storageKey = n.includes(".") ? "sites" : "groups";
@@ -237,6 +235,7 @@ async function handleConsecutiveTimeAlarm(name) {
   } catch (error) {
     logger.error("Error during tab redirection", error);
   }
+
   await chrome.alarms.clear(name);
 }
 
@@ -278,14 +277,6 @@ async function redirectTabsRestrictedByAlarm(
         }`
       ),
     });
-    logger.warning(`Tab ${tab.id} should be redirected from ${tab.url}`);
-    await chrome.tabs.update(tab.id, {
-      url: chrome.runtime.getURL(
-        `ui/redirected/redirected.html?url=${url}&host=${host}${
-          endOfRestriction ? "&eor=" + endOfRestriction : ""
-        }`
-      ),
-    });
   }
 }
 
@@ -298,7 +289,6 @@ async function redirectTabsRestrictedByAlarm(
  * @param {Array} items
  */
 async function createTimeSlotAlarms(items) {
-  // logger.debug("Create time slot alarm", items);
   // logger.debug("Create time slot alarm", items);
   const currentDay = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -375,7 +365,6 @@ async function createTimeSlotAlarms(items) {
  * @returns record
  */
 export async function createConsecutiveTimeAlarms(items, record) {
-  logger.debug("Asked to create an alarm for consecutiveTime", items, record);
   let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
     new Date()
   );
@@ -392,7 +381,6 @@ export async function createConsecutiveTimeAlarms(items, record) {
 
       let groupSum = 0;
       let sites = await getSiteNamesOfGroup(items[i].name);
-      // logger.debug("Tracking sites undefined error. Sites are :", sites, sites.map((s) => record[s]))
       // logger.debug("Tracking sites undefined error. Sites are :", sites, sites.map((s) => record[s]))
       if (!sites.length) continue;
       sites.forEach((s) => {
@@ -506,6 +494,23 @@ export async function checkIfCreateConsecutiveOrTotalTimeAlarm(
   const { groups = [] } = await chrome.storage.local.get("groups");
   const group = groups.find((x) => x.name === site.group);
 
+  // This is disgusting, need to get a grip on this.
+  const alarms = await chrome.alarms.getAll();
+  const beginAlarms = [`${site.name}-consecutive-time-restriction-begin`,
+    `${site.name}-total-time-restriction-begin`,
+    `${group.name}-consecutive-time-restriction-begin`,
+    `${group.name}-total-time-restriction-begin`,
+  ]
+  const endAlarms = [
+    `${site.name}-consecutive-time-restriction-end`,
+    `${group.name}-consecutive-time-restriction-end`,
+  ]
+  if (alarms.some((el) => beginAlarms.includes(el))) {
+    return false;
+  } else if (alarms.some((el) => endAlarms.includes(el))) {
+    return true;
+  }
+
   let allSiteRestrictions = findAllTodayRestrictionsFor(site);
   let allGroupRestrictions = findAllTodayRestrictionsFor(group);
 
@@ -585,12 +590,12 @@ export async function checkIfCreateConsecutiveOrTotalTimeAlarm(
     return false;
   }
 
-    logger.info(
-      "Out of the loop with consecutiveTime :",
-      consecutiveTime,
-      "totalTime : ",
-      totalTime
-    );
+  logger.debug(
+    "Out of the loop with consecutiveTime :",
+    consecutiveTime,
+    "totalTime : ",
+    totalTime
+  );
 
     if (consecutiveTime && consecutiveTime.delayInSeconds <= 0) {
       let pause =
@@ -681,6 +686,7 @@ async function getSumOfGroupTime(
     k === "consecutiveTime"
       ? restriction.consecutiveTime[0].consecutiveTime
       : restriction.totalTime[0].totalTime;
+  
   let sum = groupSites.reduce((curr, acc) => curr + todayRecord[acc][k], 0);
 
   return timeLimit - sum;
