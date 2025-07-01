@@ -101,13 +101,11 @@ export async function handleStorageChange(changes, area) {
   await createConsecutiveTimeAlarms(changes[key].newValue, todayRecord);
 
   logger.info("TodayRecord is now", todayRecord)
-  logger.info("TodayRecord is now", todayRecord)
   await chrome.storage.local.set({ records: records });
 }
 
 export async function handleOnAlarm(alarm) {
-  // logger.info("HandleOnAlarm : ", alarm);
-  // logger.info("HandleOnAlarm : ", alarm);
+  logger.info("HandleOnAlarm : ", alarm);
   let tabs = await chrome.tabs.query({});
   let [n, r, type] = alarm.name.split("-");
   let isGroup = n.indexOf(".") === -1;
@@ -131,7 +129,6 @@ export async function handleOnAlarm(alarm) {
   let sitesOfGroup = isGroup ? await getSiteNamesOfGroup(n) : undefined;
   await redirectTabsRestrictedByAlarm(isGroup, n, sitesOfGroup, tabs);
 
-  await chrome.alarms.clear(alarm.name);
   await chrome.alarms.clear(alarm.name);
 }
 
@@ -289,7 +286,7 @@ async function redirectTabsRestrictedByAlarm(
  * @param {Array} items
  */
 async function createTimeSlotAlarms(items) {
-  // logger.debug("Create time slot alarm", items);
+  logger.debug("Create time slot alarm", items);
   const currentDay = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
   }).format(new Date());
@@ -349,7 +346,7 @@ async function createTimeSlotAlarms(items) {
     let alarmName = `${s.name}-time-slot-restriction-${
       index === 1 ? "end" : "begin"
     }`;
-    logger.debug(`creating an alarms with name ${alarmName} and delay in minutes ${delay}`);
+    logger.debug(`creating a time slot alarm with name ${alarmName} and delay in minutes ${delay}`);
     await chrome.alarms.create(alarmName, { delayInMinutes: delay });
     console.groupEnd();
     break;
