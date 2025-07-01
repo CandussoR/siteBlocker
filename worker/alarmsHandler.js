@@ -17,11 +17,6 @@ async function alarmsAreSet() {
   let alarms = await chrome.alarms.getAll();
   return alarms.length !== 0;
 }
-
-/**
- * This only creates timeSlot alarms at startUp or when restrictions updated
- * They are the only predictable ones
- */
 /**
  * This only creates timeSlot alarms at startUp or when restrictions updated
  * They are the only predictable ones
@@ -84,11 +79,6 @@ export async function handleStorageChange(changes, area) {
   let { records = {} } = await chrome.storage.local.get("records");
   let todayRecord = records[date];
 
-  logger.info("Something has changed in either group or site.",
-    "\nThis is key", key,
-    "\nThis is changes[key].newValue :\n", changes[key].newValue,
-    "\nToday record is", todayRecord
-  )
   logger.info("Something has changed in either group or site.",
     "\nThis is key", key,
     "\nThis is changes[key].newValue :\n", changes[key].newValue,
@@ -277,10 +267,6 @@ async function redirectTabsRestrictedByAlarm(
   }
 }
 
-/**
- *
- * @param {Array} items
- */
 /**
  *
  * @param {Array} items
