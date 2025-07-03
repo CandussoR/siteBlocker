@@ -1,24 +1,21 @@
 import { setRecords } from "./settingRecord.js";
 import { logger } from "./logger.js";
 import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
+import { RecordManager } from "./recordManager.js";
 
 export async function bookkeeping(flag, tabId = undefined, host = undefined) {
   try {
   // logger.debug("In bookkeeping I have received", flag, tabId, host);
-
     let { records = [] } = await chrome.storage.local.get("records");
-    let todayRecord = await getTodayRecord(records);
+    let recordManager = new RecordManager(records);
+    let todayRecord = recordManager.todayRecord;
 
-  // logger.debug(
-    //   "todayRecord, before the switch case",
-    //   todayRecord
-    // );
     switch (flag) {
       case "audible-start":
-        todayRecord[host] = handleAudibleStart(todayRecord[host]);
+        todayRecord = handleAudibleStart(todayRecord, host);
         break;
       case "audible-end":
-        todayRecord[host] = await handleAudibleEnd(host, todayRecord[host]);
+        todayRecord = await handleAudibleEnd(todayRecord, host);
         break;
       case "open":
         todayRecord = await handleOpen(todayRecord, tabId, host);
@@ -35,23 +32,17 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
         break;
     }
 
-  // logger.debug('bookkeeping : we will set this in records : ', todayRecord);
-    await chrome.storage.local.set({ records: records });
+  // logger.debug( "todayRecord, after the switch case", recordManager.todayRecord);
+  await recordManager.save()
   } catch (error) {
   // logger.error('Error in bookkeeping, avorting any change : ', error);
   }
 }
 
-export async function getTodayRecord(records) {
-  let date = new Date().toISOString().split("T")[0];
-  let todayRecord = records[date];
-  if (!todayRecord) {
-    todayRecord = await setRecords(date);
-  }
-  return todayRecord;
-}
+
 
 export async function handleOpen(todayRecord, tabId, host) {
+  logger.debug("Handling open with site", host, tabId)
   // Deleting tab from last domain if it has changed
   for (let site of Object.keys(todayRecord)) {
     if (
@@ -92,11 +83,7 @@ export async function handleClose(todayRecord, tabId) {
       continue;
     } 
     
-  // logger.debug(`working with this piece for ${site}`, siteRecord, "still have to bookkeep")
-    if (siteRecord.tabId.length > 1) {
-    } 
-    
-  // logger.debug(`working with this piece for ${site}`, siteRecord, "still have to bookkeep")
+    // logger.debug(`working with this piece for ${site}`, siteRecord, "still have to bookkeep")
     if (siteRecord.tabId.length > 1) {
       if (siteRecord.audible && (await checkToggleAudible(site))) {
         siteRecord.audible = false;
@@ -137,16 +124,16 @@ export async function handleClose(todayRecord, tabId) {
   return todayRecord;
 }
 
-export function handleAudibleStart(siteRecord) {
-  siteRecord.audible = true;
-  if (!siteRecord.initDate) siteRecord.initDate = Date.now();
-  return siteRecord;
+export function handleAudibleStart(todayRecord, host) {
+  todayRecord[host].audible = true;
+  if (!todayRecord[host].initDate) todayRecord[host].initDate = Date.now();
+  return todayRecord;
 }
 
-export async function handleAudibleEnd(site, siteRecord) {
-  siteRecord.audible = false;
+export async function handleAudibleEnd(todayRecord, host) {
+  todayRecord[host].audible = false;
 
-  if (!siteRecord.initDate) {
+  if (!todayRecord[host].initDate) {
   // logger.warning(
     //   "SiteRecord has no initDate when handleAudibleEnd ! Can't bookkeep consecutive time nor total time !",
     //   site,
@@ -154,22 +141,22 @@ export async function handleAudibleEnd(site, siteRecord) {
     // );
   }
 
-  if (!siteRecord.focused && siteRecord.initDate) {
-    if ("consecutiveTime" in siteRecord) {
-     siteRecord = await bookkeepConsecutiveTime(site, siteRecord);
+  if (!todayRecord[host].focused && todayRecord[host].initDate) {
+    if ("consecutiveTime" in todayRecord[host]) {
+     todayRecord[host] = await bookkeepConsecutiveTime(site, todayRecord[host]);
     } else {
-      siteRecord.totalTime += Math.round(
-        (Date.now() - siteRecord.initDate) / 1000
+      todayRecord[host].totalTime += Math.round(
+        (Date.now() - todayRecord[host].initDate) / 1000
       );
     }
 
   // const trace = console.trace()
   // logger.debug("trace is", trace)
-  // logger.warning("setting initDate to null", site, siteRecord, console.trace())
-    siteRecord.initDate = null;
+  // logger.warning("setting initDate to null", site, todayRecord[host], console.trace())
+    todayRecord[host].initDate = null;
   }
 
-  return siteRecord;
+  return todayRecord;
 }
 
 export async function handleNoFocus(todayRecord) {
