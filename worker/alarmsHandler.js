@@ -1,5 +1,5 @@
 import { bookkeepingQueue } from "./bookkeepingQueue.js";
-import { getTodayRecord } from "./bookkeeping.js";
+import { setRecords } from "./settingRecord.js";
 import {
   findAllTodayRestrictionsFor,
   findTodayRestriction,
@@ -39,8 +39,6 @@ export async function createAlarms() {
 export async function handleStorageChange(changes, area) {
   if (
     "busy" in changes &&
-    !changes.busy.newValue &&
-    changes.busy.oldValue &&
     !changes.busy.newValue &&
     changes.busy.oldValue &&
     bookkeepingQueue.queue.length
@@ -100,24 +98,25 @@ export async function handleOnAlarm(alarm) {
   let [n, r, type] = alarm.name.split("-");
   let isGroup = n.indexOf(".") === -1;
 
+  // Not handling total-time : always begin, no end, always redirect.
   if (alarm.name.includes("-consecutive-time")) {
+    logger.info("Will hop into handleConsecutiveTimeAlarm");
     await handleConsecutiveTimeAlarm(alarm.name);
     return;
-  }
-
-  if (type === "end") {
-    await chrome.alarms.clear(alarm.name);
-    let { data = [] } = await chrome.storage.local.get(
-      isGroup ? "groups" : "sites"
-    );
+  } else if (alarm.name.includes("-time-slot")) {
+    let data = await chrome.storage.local.get(isGroup ? "groups" : "sites");
+    data = isGroup ? data.groups : data.sites;
+    if (!data) {
+      data = []
+    }
     data = data.filter((x) => x.name === n);
-    console.assert(Array.isArray(data) === true, "data is not an array");
     await createTimeSlotAlarms(data);
-    return;
   }
 
-  let sitesOfGroup = isGroup ? await getSiteNamesOfGroup(n) : undefined;
-  await redirectTabsRestrictedByAlarm(isGroup, n, sitesOfGroup, tabs);
+  if (alarm.name.endsWith("begin")) {
+    let sitesOfGroup = isGroup ? await getSiteNamesOfGroup(n) : undefined;
+    await redirectTabsRestrictedByAlarm(isGroup, n, sitesOfGroup, tabs);
+  }
 
   await chrome.alarms.clear(alarm.name);
 }
@@ -176,16 +175,18 @@ async function handleConsecutiveTimeAlarm(name) {
     item.restrictions,
     "consecutiveTime"
   );
-  // If no restriction for a site, let's check the group
-  if (!consecutiveTimeRestriction && storageKey === "sites") {
-    let { groups = [] } = await chrome.storage.local.get("groups");
-    let restrictions = groups.find((x) => x.name === item.group).restrictions;
-    consecutiveTimeRestriction = findTodayRestriction(
-      currentDay,
-      restrictions,
-      "consecutiveTime"
-    );
-  }
+
+    // If no restriction for a site, let's check the group
+    if (!consecutiveTimeRestriction && storageKey === "sites") {
+      let { groups = [] } = await chrome.storage.local.get("groups");
+      let restrictions = groups.find((x) => x.name === item.group).restrictions;
+      consecutiveTimeRestriction = findTodayRestriction(
+        currentDay,
+        restrictions,
+        "consecutiveTime"
+      );
+    }
+
 
   // logger.debug("ConsecutiveTimeRestriction", consecutiveTimeRestriction)
   let endOfRestriction = new Date();
@@ -583,8 +584,8 @@ export async function checkIfCreateConsecutiveOrTotalTimeAlarm(
     if (consecutiveTime && consecutiveTime.delayInSeconds <= 0) {
       let pause =
         whatItIs === "site"
-          ? allSiteRestrictions.consecutiveTime.pause
-          : allGroupRestrictions.consecutiveTime.pause;
+          ? allSiteRestrictions.consecutiveTime[0].pause
+          : allGroupRestrictions.consecutiveTime[0].pause;
       let delay =
         (new Date(new Date().getTime() + pause * 1000) - Date.now()) /
         1000 /
@@ -595,7 +596,7 @@ export async function checkIfCreateConsecutiveOrTotalTimeAlarm(
       );
       logger.info(
         "Creating an alarm with name" +
-        ` ${consecutiveTime.name}-consecutive-time-restriction-end and delayInMinutes ${delay}`
+          ` ${consecutiveTime.name}-consecutive-time-restriction-end and delayInMinutes ${delay}`
       );
       return true;
     } else if (totalTime && totalTime.delayInSeconds <= 0) {
@@ -673,4 +674,13 @@ async function getSumOfGroupTime(
   let sum = groupSites.reduce((curr, acc) => curr + todayRecord[acc][k], 0);
 
   return timeLimit - sum;
+}
+
+async function getTodayRecord(records) {
+  let date = new Date().toISOString().split("T")[0];
+  let todayRecord = records[date];
+  if (!todayRecord) {
+    todayRecord = await setRecords(date);
+  }
+  return todayRecord;
 }
