@@ -85,11 +85,11 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 
 // I don't check onCreated since the url or pending are generally set through onUpdated.
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  let treatUrl = shouldTreatUrl(changeInfo, tab);
-  if (!treatUrl && !("audible" in changeInfo))
+  let url = urlToBeTreated(changeInfo, tab);
+  if (!url && !("audible" in changeInfo))
     return;
 
-  if (isAppPageOrNewTab(changeUrl)) {
+  if (isAppPageOrNewTab(url)) {
     await processOrEnqueue("no-focus");
     return;
   }
@@ -104,7 +104,6 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!sites) 
     return;
 
-  let url = changeUrl || tab.url;
   let host = tab.incognito ? "private" : new URL(url).host;
   if (!isInWatchedList(sites, host)) return;
 
@@ -149,7 +148,7 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 
-function shouldTreatUrl(changeInfo, tab) {
+function urlToBeTreated(changeInfo, tab) {
   return changeInfo.pendingUrl || changeInfo.url || tab.url;
 }
 function isAppPageOrNewTab(url) {
