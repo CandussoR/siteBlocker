@@ -39,10 +39,14 @@ export class TimeSlotRestriction {
    *
    * Intended to identify when the next time slot will *start* or *end*,
    * to help schedule the next alarm.
+   * Might be chained to Site|Group.todayRestrictions which can be undefined.
    *
    * @returns {string | undefined} The next relevant time string (e.g., "14:00"), or undefined if none found.
    */
   getFollowingTime() {
+    if (!this.restriction)
+      return undefined;
+
     for (let res of this.restriction) {
       let timeSlots = res.time;
       let currentTime = new Date().toLocaleTimeString("fr-FR");
