@@ -9,6 +9,7 @@ import {logger} from './logger.js';
 import { processOrEnqueue } from "./blocker.js";
 import { handleAlarms } from "./alarmsHandler.js";
 import { AlarmManager } from "./alarmManager.js";
+import { entitiesCache } from "./siteAndGroupModels.js";
 
 chrome.runtime.onInstalled.addListener(async () => {
   let { sites } = await chrome.storage.local.get("sites");
@@ -19,6 +20,7 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (groups === undefined || groups.length === 0) {
     await chrome.storage.local.set({ groups: [] });
   }
+  await entitiesCache.initialize();
   await chrome.storage.local.set({ daysToRecord: daysToRecord });
   await chrome.storage.local.set({
     consecutiveTimeReset: consecutiveTimeReset,
@@ -27,6 +29,7 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
+  await entitiesCache.initialize()
   await chrome.storage.local.set({ busy: true });
 
   let today = new Date().toISOString().split("T")[0];
@@ -43,7 +46,7 @@ chrome.runtime.onStartup.addListener(async () => {
   await chrome.alarms.clearAll();
   await chrome.storage.local.set({ busy: false });
 
-  await handleAlarms();
+  await handleAlarms(entitiesCache);
 });
 
 import { getSites } from "./commons.js";
@@ -135,7 +138,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   try {
     console.log("changes in storage", changes, area);
     // No need to do anything with logs
-    await handleStorageChange(changes, area);
+    await handleStorageChange(changes, entitiesCache, area);
   } catch (error) {
     console.error("Error handling storage change:", error);
   }
@@ -144,7 +147,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 // Fires when I alarms has been triggered
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
-    await handleOnAlarm(alarm);
+    await handleOnAlarm(alarm, entitiesCache);
   } catch (error) {
     logger.error('Error handling onAlarm : ', error);
     await chrome.alarms.clear(alarm.name)
