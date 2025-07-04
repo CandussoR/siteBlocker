@@ -2,14 +2,7 @@ import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
 import { findTodayRestriction } from "./commons.js";
 import { logger } from './logger.js';
 
-export async function getSites() {
-  let { sites = [] } = await chrome.storage.local.get("sites");
-  if (chrome.runtime.lastError) {
-    console.error("An error occurred while fetching your settings.");
-    return;
-  }
-  return sites;
-}
+
 
 /**
  * 
