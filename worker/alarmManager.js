@@ -57,4 +57,11 @@ export class AlarmManager {
         .filter((x) => x[x.length - 1] === "k")
         .map((x) => x.name);
   }
+
+  async setAlarm(anAlarm) {
+    await chrome.alarms.create(anAlarm.name, {delayInMinutes : anAlarm.delayInMinutes});
+  }
+  async deleteAlarm(anAlarm) {
+    await chrome.alarms.clear(anAlarm.name);
+  }
 }
