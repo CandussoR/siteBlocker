@@ -1,3 +1,20 @@
+export async function getSites() {
+  let { sites = [] } = await chrome.storage.local.get("sites");
+  if (chrome.runtime.lastError) {
+    console.error("An error occurred while fetching your settings.");
+    return;
+  }
+  return sites;
+}
+
+export async function getGroups() {
+  let { sites = [] } = await chrome.storage.local.get("sites");
+  if (chrome.runtime.lastError) {
+    console.error("An error occurred while fetching your settings.");
+    return;
+  }
+  return sites;
+}
 
 export function findTodayRestriction(currentDay, restrictions, restrictionKey) {
     if (!restrictions || !(restrictionKey in restrictions)) {

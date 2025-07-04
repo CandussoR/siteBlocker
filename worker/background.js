@@ -46,7 +46,8 @@ chrome.runtime.onStartup.addListener(async () => {
   await handleAlarms();
 });
 
-import { getSites, isRestricted } from "./restrictionsHandler.js";
+import { getSites } from "./commons.js";
+import { isRestricted } from "./restrictionsHandler.js";
  
 // Fires when the active tab in a window changes.
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
@@ -85,7 +86,7 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
 
 // I don't check onCreated since the url or pending are generally set through onUpdated.
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  let url = urlToBeTreated(changeInfo, tab);
+  let url = changeInUrl(changeInfo);
   if (!url && !("audible" in changeInfo))
     return;
 
@@ -101,14 +102,17 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   }
 
   let sites = await getSites();
-  if (!sites) 
+  if (!sites.length) 
     return;
 
+  if (!url)
+    url = tab.url
   let host = tab.incognito ? "private" : new URL(url).host;
-  if (!isInWatchedList(sites, host)) return;
+  if (!isInWatchedList(sites, host)) 
+    return;
 
   const am = new AlarmManager(await chrome.alarms.getAll())
-  if (am.getEndAlarms(host) || await isRestricted(host, sites)) {
+  if (am.getEndAlarms(host).length || await isRestricted(host, sites)) {
     sendCloseAndRedirect(tabId, host, url);
     return;
   }
@@ -148,8 +152,8 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
 });
 
 
-function urlToBeTreated(changeInfo, tab) {
-  return changeInfo.pendingUrl || changeInfo.url || tab.url;
+function changeInUrl(changeInfo) {
+  return changeInfo.pendingUrl || changeInfo.url;
 }
 function isAppPageOrNewTab(url) {
   return url.includes("chrome://newtab/") || url.includes("ui/")
