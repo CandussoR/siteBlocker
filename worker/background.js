@@ -101,7 +101,10 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!url && !("audible" in changeInfo))
     return;
 
-  if (isAppPageOrNewTab(url)) {
+  if (url.includes("ui/redirected/redirected.html")) {
+    await processOrEnqueue("close", tabId, new URL(url).host)
+    return;
+  } else if (isAppPageOrNewTab(url)) {
     await processOrEnqueue("no-focus");
     return;
   }
@@ -116,7 +119,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!sites.length) 
     return;
 
-  if (!url)
+  if (!url) 
     url = tab.url
   let host = tab.incognito ? "private" : new URL(url).host;
   if (!isInWatchedList(sites, host)) 

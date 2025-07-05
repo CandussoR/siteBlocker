@@ -3,11 +3,10 @@ import { setRecords } from "./settingRecord.js";
 import {
   findAllTodayRestrictionsFor,
   findTodayRestriction,
-  getGroups,
   getSiteNamesOfGroup,
 } from "./commons.js";
 import { logger } from "./logger.js";
-import { Site, Group, EntitiesCache } from "./siteAndGroupModels.js";
+import { EntitiesCache } from "./siteAndGroupModels.js";
 import { AlarmManager } from "./alarmManager.js";
 import { TimeSlotRestriction } from "./restrictions.js";
 import { RecordManager } from "./recordManager.js";
@@ -85,9 +84,9 @@ export async function handleOnAlarm(alarm, entitiesCache) {
     logger.info("Will hop into handleConsecutiveTimeAlarm");
     await handleConsecutiveTimeAlarm(alarm.name);
     return;
-  } else if (alarm.name.includes("-time-slot")) {
+  } else if (alarm.name.includes("-time-slot") || alarm.name.includes("total-time")) {
       let handler = createAlarmHandler(alarm, entitiesCache);
-      handler.handle(entitiesCache)
+      handler.handle()
       return;
   }
 
@@ -206,6 +205,13 @@ async function handleConsecutiveTimeAlarm(name) {
   await chrome.alarms.clear(name);
 }
 
+/**
+ * 
+ * @param {ParsedAlarm} parsedAlarm 
+ * @param {Array[Site|string]} sitesToBeRedirected - array containing all the Site objects of a group or the host name
+ * @param {*} tabs 
+ * @param {null} endOfRestriction - do not fill, will soon be deleted when handling alarms end better
+ */
 async function redirectTabsRestrictedByAlarm(
   parsedAlarm,
   sitesToBeRedirected,
@@ -612,7 +618,7 @@ function parseAlarmName(anAlarm) {
  * 
  * @param {Alarm} anAlarm 
  * @param {EntitiesCache} entitiesCache 
- * @returns 
+ * @returns {TimeSlotAlarmHandler | TotalTimeAlarmHandler }
  */
 function createAlarmHandler(anAlarm, entitiesCache) {
   let parsed = parseAlarmName(anAlarm)
@@ -625,9 +631,7 @@ function createAlarmHandler(anAlarm, entitiesCache) {
       return new ConsecutiveTimeAlarmHandler(anAlarm, parsed).handle();
       break;
     case "total":
-      throw new Error("Not Implemented yet");
-      return new TotalTimeAlarmHandler(anAlarm, parsed).handle();
-      break;
+      return new TotalTimeAlarmHandler(anAlarm, parsed, entitiesCache);
     default:
       throw new Error("Alarm restriction doesn't exist", parsed.restriction)
   }
@@ -674,7 +678,7 @@ class TimeSlotAlarmHandler {
       let tabs = await chrome.tabs.query({});
       await redirectTabsRestrictedByAlarm(
         this.parsed,
-        this.parsed.isGroup ? entity.sites : [],
+        this.parsed.isGroup ? entity.sites : [this.parsed.target],
         tabs,
         null
       );
@@ -693,6 +697,7 @@ class TimeSlotAlarmHandler {
    * Used for initializations of extension or reset following storage change.
    */
   async initializeEveryAlarm() {
+
     for (let group of this.entcache.groups) {
       if (!group.todayRestrictions?.timeSlot) continue;
       let next = new TimeSlotRestriction(group.todayRestrictions.timeSlot).getFollowingTime();
@@ -701,6 +706,7 @@ class TimeSlotAlarmHandler {
         delayInMinutes: this.#calculateDelay(next.time),
       });
     }
+
     for (let site of this.entcache.sites) {
       if (!site.todayRestrictions?.timeSlot) continue;
       let next = new TimeSlotRestriction(site.todayRestrictions.timeSlot).getFollowingTime();
@@ -725,3 +731,31 @@ class TimeSlotAlarmHandler {
   }
 }
 
+class TotalTimeAlarmHandler
+{  /**
+   * 
+   * @param {Alarm} alarm 
+   * @param {ParsedAlarm} parsed 
+   * @param {EntitiesCache} entitiesCache 
+   */
+  constructor(alarm, parsed, entitiesCache) {
+    this.alarm = alarm;
+    this.parsed = parsed;
+    this.entcache = entitiesCache;
+    /** @type {AlarmManager} */
+    this.manager = new AlarmManager();
+  }
+
+  /**
+   * Handle the alarm for the beginning of the restriction
+   */
+  async handle() {
+    let tabs = await chrome.tabs.query({});
+    await redirectTabsRestrictedByAlarm(
+      this.parsed,
+      this.parsed.isGroup ? entity.sites : [this.parsed.target],
+      tabs,
+      null
+    );
+  }
+}
