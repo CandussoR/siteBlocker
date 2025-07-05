@@ -2,17 +2,21 @@ const {logs = []} = await chrome.storage.local.get('logs')
 
 const logList = document.getElementById('log-list')
 
-if (!logs) {
-    logList.insertAdjacentHTML(
-        "afterbegin",
-        `<p class="text-info">No logs.</p>`
-    )
-} else {
-     for (let i = 0 ; i < logs.length ; i++) {
+loadLogsIn(logs, logList)
+
+function loadLogsIn(logs, logList) {
+    if (!logs || logs.length == 0) {
+        logList.insertAdjacentHTML(
+            "afterbegin",
+            `<p class="text-info font-semibold text-lg">No logs.</p>`
+        )
+        return;
+    }
+    for (let i = 0 ; i < logs.length ; i++) {
         logList.insertAdjacentHTML('afterbegin',
             getEl(logs[i])
             )
-    }  
+    } 
 }
 
 function getBackgroundColor(log) {
@@ -45,3 +49,8 @@ function getEl(log) {
             </div>`
     }
 }
+
+document.querySelector('select#level-select').addEventListener("change", e => {
+    logList.innerHTML = ''
+    loadLogsIn(logs.filter(x => x.level === e.target.value.toUpperCase()), logList)
+})
