@@ -34,6 +34,11 @@ export class TimeSlotRestriction {
   }
 
   /**
+   * @typedef {Object} Threshold
+   * @property {'begin'|'end'} phase - if the time correspond to the beginning or end of restriction
+   * @property {string} time - the next time for alarm in "00:00" format
+   */
+  /**
    * Finds the next time threshold (start or end) in the defined time slots
    * that comes after the current time.
    *
@@ -41,7 +46,7 @@ export class TimeSlotRestriction {
    * to help schedule the next alarm.
    * Might be chained to Site|Group.todayRestrictions which can be undefined.
    *
-   * @returns {string | undefined} The next relevant time string (e.g., "14:00"), or undefined if none found.
+   * @returns {Threshold | undefined} The next relevant threshold, or undefined if none found.
    */
   getFollowingTime() {
     if (!this.restriction)
@@ -50,16 +55,16 @@ export class TimeSlotRestriction {
     for (let res of this.restriction) {
       let timeSlots = res.time;
       let currentTime = new Date().toLocaleTimeString("fr-FR");
-      let found = null;
       for (let j = 0; j < timeSlots.length; j++) {
-        found = timeSlots[j].find(
-          (t, i) =>
-            (i == 0 && t > currentTime) ||
-            (i == 1 && (t > currentTime || t === "00:00"))
-        );
-        if (found) return found;
+        let slot = timeSlots[j];
+        if (slot[0] > currentTime) {
+          return {phase : "begin", time : slot[0]};
+        } else if (slot[1] > currentTime || slot[1] === "00:00") {
+          return {phase : "end", time : slot[1]}
+        };
       }
     }
+    
     return undefined;
   }
 }

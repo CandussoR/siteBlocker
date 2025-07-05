@@ -668,7 +668,7 @@ class TimeSlotAlarmHandler {
     if (this.parsed.phase === "begin") {
       await this.manager.setAlarm(
         `${this.parsed.target}-time-slot-restriction-end`,
-        { delayInMinutes: this.#calculateDelay(next) }
+        { delayInMinutes: this.#calculateDelay(next.time) }
       );
 
       let tabs = await chrome.tabs.query({});
@@ -678,10 +678,10 @@ class TimeSlotAlarmHandler {
         tabs,
         null
       );
-    } else if (this.parsed.phase === "end") {
+    } else if (this.parsed.phase === "end" && next) {
       await this.manager.setAlarm(
         `${this.parsed.target}-time-slot-restriction-begin`,
-        { delayInMinutes: this.#calculateDelay(next) }
+        { delayInMinutes: this.#calculateDelay(next.time) }
       );
     }
 
@@ -695,18 +695,18 @@ class TimeSlotAlarmHandler {
   async initializeEveryAlarm() {
     for (let group of this.entcache.groups) {
       if (!group.todayRestrictions?.timeSlot) continue;
-      let next = new TimeSlotRestriction( group.todayRestrictions?.timeSlot).getFollowingTime();
+      let next = new TimeSlotRestriction(group.todayRestrictions.timeSlot).getFollowingTime();
       if (!next) continue;
-      await this.manager.setAlarm(`${group.name}-time-slot-restriction-begin`, {
-        delayInMinutes: this.#calculateDelay(next),
+      await this.manager.setAlarm(`${group.name}-time-slot-restriction-${next.phase}`, {
+        delayInMinutes: this.#calculateDelay(next.time),
       });
     }
     for (let site of this.entcache.sites) {
       if (!site.todayRestrictions?.timeSlot) continue;
       let next = new TimeSlotRestriction(site.todayRestrictions.timeSlot).getFollowingTime();
       if (!next) continue;
-      await this.manager.setAlarm(`${site.name}-time-slot-restriction-begin`, {
-        delayInMinutes: this.#calculateDelay(next),
+      await this.manager.setAlarm(`${site.name}-time-slot-restriction-${next.phase}`, {
+        delayInMinutes: this.#calculateDelay(next.time),
       });
     }
   }
