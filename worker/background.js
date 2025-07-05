@@ -79,7 +79,12 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     await processOrEnqueue("no-focus");
   } else {
     let sites = await getSites();
-    if ( !tab.url || isAppPageOrNewTab(tab.url)) return;
+    try {
+      if ( !tab.url || isAppPageOrNewTab(tab.url)) return;
+    } catch(error) {
+      console.error(error);
+      logger.error(error)
+    }
 
     let host = new URL(tab.url).host;
     if (!isInWatchedList(sites, host)) return;
