@@ -1,14 +1,11 @@
-import { setRecords } from "./settingRecord.js";
 import { logger } from "./logger.js";
 import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
-import { RecordManager } from "./recordManager.js";
+import { rm } from "./recordManager.js";
 
 export async function bookkeeping(flag, tabId = undefined, host = undefined) {
   try {
   // logger.debug("In bookkeeping I have received", flag, tabId, host);
-    let { records = [] } = await chrome.storage.local.get("records");
-    let recordManager = new RecordManager(records);
-    let todayRecord = recordManager.todayRecord;
+    let todayRecord = rm.todayRecord;
 
     switch (flag) {
       case "audible-start":
@@ -33,7 +30,7 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     }
 
   // logger.debug( "todayRecord, after the switch case", recordManager.todayRecord);
-  await recordManager.save()
+  await rm.save()
   } catch (error) {
   // logger.error('Error in bookkeeping, avorting any change : ', error);
   }

@@ -9,7 +9,8 @@ import {logger} from './logger.js';
 import { processOrEnqueue } from "./blocker.js";
 import { handleAlarms } from "./alarmsHandler.js";
 import { AlarmManager } from "./alarmManager.js";
-import { entitiesCache } from "./siteAndGroupModels.js";
+import { EntitiesCache, entitiesCache } from "./siteAndGroupModels.js";
+import {RecordManager, rm } from './recordManager.js';
 
 chrome.runtime.onInstalled.addListener(async () => {
   let { sites } = await chrome.storage.local.get("sites");
@@ -20,7 +21,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (groups === undefined || groups.length === 0) {
     await chrome.storage.local.set({ groups: [] });
   }
-  await entitiesCache.initialize();
+  await initializeSingletons(entitiesCache, rm);
+
   await chrome.storage.local.set({ daysToRecord: daysToRecord });
   await chrome.storage.local.set({
     consecutiveTimeReset: consecutiveTimeReset,
@@ -29,7 +31,8 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  await entitiesCache.initialize()
+  await initializeSingletons(entitiesCache, rm);
+
   await chrome.storage.local.set({ busy: true });
 
   let today = new Date().toISOString().split("T")[0];
@@ -159,6 +162,15 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   }
 });
 
+/**
+ * 
+ * @param {EntitiesCache} entitiesCache 
+ * @param {RecordManager} recordManager 
+ */
+async function initializeSingletons(entitiesCache, recordManager) {
+  await entitiesCache.initialize();
+  await recordManager.initialize();
+}
 
 function changeInUrl(changeInfo) {
   return changeInfo.pendingUrl || changeInfo.url;

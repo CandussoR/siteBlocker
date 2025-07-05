@@ -1,6 +1,12 @@
 export class RecordManager {
   #records;
+
   constructor(records = null) {
+    this.#records = records;
+  }
+
+  async initialize() {
+    const { records = [] } = await chrome.storage.local.get("records");
     this.#records = records;
   }
 
@@ -24,7 +30,7 @@ export class RecordManager {
     return this.todayRecord[site];
   }
 
-  updateFromChange(changes, entitiesCache) {
+  updateFromStorageChange(changes, entitiesCache) {
     if (
       !changes.sites ||
       changes.sites.newValue.length < changes.sites.oldValue.length
@@ -49,12 +55,9 @@ export class RecordManager {
     }
   }
 
-  async getAll() {
-    const { records = [] } = await chrome.storage.local.get("records");
-    this.#records = records;
-  }
-
   async save() {
     await chrome.storage.local.set({ records: this.#records });
   }
 }
+
+export const rm = new RecordManager()
