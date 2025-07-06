@@ -757,5 +757,6 @@ class TotalTimeAlarmHandler
       tabs,
       null
     );
+    await this.manager.deleteAlarm(this.parsed.originalName);
   }
 }
