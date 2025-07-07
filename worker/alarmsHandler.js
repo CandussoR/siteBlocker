@@ -39,10 +39,11 @@ export async function createAlarms(entitiesCache) {
  * 
  * @param {Object} changes 
  * @param {EntitiesCache} entitiesCache 
+ * @param {RecordManager} rm - recordManager singleton
  * @param {*} area 
  * @returns 
  */
-export async function handleStorageChange(changes, entitiesCache, area) {
+export async function handleStorageChange(changes, entitiesCache, rm, area) {
   if (
     "busy" in changes &&
     !changes.busy.newValue &&
@@ -55,8 +56,6 @@ export async function handleStorageChange(changes, entitiesCache, area) {
   if (!("sites" in changes || "groups" in changes)) return;
 
   entitiesCache.updateFromChange(changes);
-  let { records = [] } = await chrome.storage.local.get("records");
-  const rm = new RecordManager(records);
   rm.updateFromChange(changes, entitiesCache);
   await rm.save();
 
@@ -72,137 +71,15 @@ export async function handleStorageChange(changes, entitiesCache, area) {
   await rm.save();
 }
 
-export async function handleOnAlarm(alarm, entitiesCache) {
+export async function handleOnAlarm(alarm, entitiesCache, recordManager) {
   logger.info("HandleOnAlarm : ", alarm);
-  let parsedAlarm = parseAlarmName(alarm)
-  let [n, r, type] = alarm.name.split("-");
-
-
-
-  // Not handling total-time : always begin, no end, always redirect.
-  if (alarm.name.includes("-consecutive-time")) {
-    logger.info("Will hop into handleConsecutiveTimeAlarm");
-    await handleConsecutiveTimeAlarm(alarm.name);
-    return;
-  } else if (alarm.name.includes("-time-slot") || alarm.name.includes("total-time")) {
-      let handler = createAlarmHandler(alarm, entitiesCache);
-      handler.handle()
-      return;
-  }
-
-  if (alarm.name.endsWith("begin")) {
-    let tabs = await chrome.tabs.query({});
-    let sites = parsedAlarm.isGroup ? entitiesCache.getGroupByName(parsedAlarm.target) : entitiesCache.getSiteByName(parsedAlarm.target);
-    await redirectTabsRestrictedByAlarm(parsedAlarm, sites, tabs, null);
-  }
-
-  await chrome.alarms.clear(alarm.name);
-}
-
-async function handleConsecutiveTimeAlarm(name) {
-  if (!name) return;
-
-  logger.warning(`handleConsecutiveTimeAlarm with param ${name}`);
-  parsedAlarm = parseAlarmName({name})
-  let n = name.split("-").shift();
-  let storageKey = n.includes(".") ? "sites" : "groups";
-  let sitesOfGroup =
-    storageKey === "groups" ? await getSiteNamesOfGroup(n) : undefined;
-
-  // If check, means that site/group with consecutiveTime has not been visited and has to be resetted
-  if (name.includes("-check") || name.includes("-end")) {
-    logger.info(
-      `Alarm is check or end (${name}), resetting consecutive time and adding to total time`
-    );
-
-    try {
-      // Adding consecutiveTime to totalTime and resetting it
-      let { records = [] } = await chrome.storage.local.get("records");
-      let todayRecord = await getTodayRecord(records);
-      let sitesToUpdate = sitesOfGroup || [todayRecord[n]];
-      // logger.info("sitesToUpdate before check or end :", sitesToUpdate);
-      sitesToUpdate.forEach((s) => {
-        todayRecord[s].totalTime += todayRecord[s].consecutiveTime;
-        todayRecord[s].consecutiveTime = 0;
-      });
-      // logger.info("resulting todayRecord :", todayRecord);
-      // logger.info("resulting records", records)
-      await chrome.storage.local.set({ records: records });
-      await chrome.alarms.clear(name);
-      return;
-    } catch (error) {
-      logger.error(error);
-    }
-  }
-
-  // beginning of restriction, either site or group has the restriction
-  // logger.info("Beggining of restriction for site or group");
-  let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
-    new Date()
-  );
+  let handler = createAlarmHandler(alarm, entitiesCache, recordManager);
   try {
-    let data = await chrome.storage.local.get(storageKey);
-    data = data[storageKey];
-  } catch (error) {
-    logger.error("Error while fetching storageKey", storageKey);
-    return;
+    handler.handle()
+  } catch(error) {
+    logger.error("Problem during the handling of the alarm", error);
+    throw new Error("Problem during the handling of the alarm", error);
   }
-
-  let item = data.find((x) => x.name === n);
-  let consecutiveTimeRestriction = findTodayRestriction(
-    currentDay,
-    item.restrictions,
-    "consecutiveTime"
-  );
-
-    // If no restriction for a site, let's check the group
-    if (!consecutiveTimeRestriction && storageKey === "sites") {
-      let { groups = [] } = await chrome.storage.local.get("groups");
-      let restrictions = groups.find((x) => x.name === item.group).restrictions;
-      consecutiveTimeRestriction = findTodayRestriction(
-        currentDay,
-        restrictions,
-        "consecutiveTime"
-      );
-    }
-
-
-  // logger.debug("ConsecutiveTimeRestriction", consecutiveTimeRestriction)
-  let endOfRestriction = new Date();
-  if (consecutiveTimeRestriction) {
-    // Adds time in milliseconds
-    endOfRestriction.setTime(
-      endOfRestriction.getTime() + consecutiveTimeRestriction.pause * 1000
-    );
-
-    await chrome.alarms.create(`${n}-consecutive-time-restriction-end`, {
-      delayInMinutes: consecutiveTimeRestriction.pause / 60,
-    });
-  } else {
-    await chrome.alarms.clear(name);
-    return;
-  }
-
-  let tabs = await chrome.tabs.query({});
-  // need to better check urls non empty
-  tabs = tabs.filter((t) =>
-    sitesOfGroup
-      ? t.url && sitesOfGroup.includes(new URL(t.url).host)
-      : t.url && new URL(t.url).host === n
-  );
-
-  try {
-    await redirectTabsRestrictedByAlarm(
-      parsedAlarm,
-      [n],
-      tabs,
-      endOfRestriction ? endOfRestriction.toLocaleTimeString() : null
-    );
-  } catch (error) {
-    logger.error("Error during tab redirection", error);
-  }
-
-  await chrome.alarms.clear(name);
 }
 
 /**
@@ -620,16 +497,14 @@ function parseAlarmName(anAlarm) {
  * @param {EntitiesCache} entitiesCache 
  * @returns {TimeSlotAlarmHandler | TotalTimeAlarmHandler }
  */
-function createAlarmHandler(anAlarm, entitiesCache) {
+function createAlarmHandler(anAlarm, entitiesCache, recordManager) {
   let parsed = parseAlarmName(anAlarm)
 
   switch (parsed.restriction) {
     case "time":
       return new TimeSlotAlarmHandler(anAlarm, parsed, entitiesCache);
     case "consecutive":
-      throw new Error("Not implemented yet");
-      return new ConsecutiveTimeAlarmHandler(anAlarm, parsed).handle();
-      break;
+      return new ConsecutiveTimeAlarmHandler(anAlarm, parsed, recordManager);
     case "total":
       return new TotalTimeAlarmHandler(anAlarm, parsed, entitiesCache);
     default:
@@ -757,6 +632,58 @@ class TotalTimeAlarmHandler
       tabs,
       null
     );
+    await this.manager.deleteAlarm(this.parsed.originalName);
+  }
+}
+
+class ConsecutiveTimeAlarmHandler {
+  /**
+   *
+   * @param {Alarm} alarm
+   * @param {ParsedAlarm} parsed
+   * @param {EntitiesCache} entitiesCache
+   * @param {RecordManager} recordManager
+   */
+  constructor(alarm, parsed, entitiesCache, recordManager) {
+    this.alarm = alarm;
+    this.parsed = parsed;
+    this.entcache = entitiesCache;
+    this.rm = recordManager;
+    /** @type {AlarmManager} */
+    this.am = new AlarmManager();
+  }
+
+  async handle() {
+    let entity = this.parsed.isGroup
+      ? this.entcache.getGroupByName(this.parsed.target)
+      : this.entcache.getSiteByName(this.parsed.target);
+
+    let endOfRestriction = new Date();
+    let pause = entity.todayRestrictions?.consecutiveTime.pause;
+    endOfRestriction.getTime() + pause * 1000
+
+    if (this.parsed.phase === "begin") {
+      let tabs = await chrome.tabs.query({});
+      redirectTabsRestrictedByAlarm(
+        this.parsed,
+        this.parsed.isGroup ? entity.sites : [this.parsed.target],
+        tabs,
+        endOfRestriction.toLocaleTimeString()
+      );
+
+      this.am.setAlarm(
+        this.parsed.target + "-consecutive-time-restriction-end",
+        { delayInMinutes: entity.todayRestrictions?.consecutiveTime.pause / 60 }
+      );
+    } else if (this.parsed.phase === "check") {
+      this.rm.resetConsecutiveTime(entity);
+    } else if (this.parsed.phase === "end") {
+      this.rm.resetConsecutiveTime(entity);
+      // Notify redirected tabs if there are ?
+    } else {
+      throw new Error("Wrong phase is being called", this.parsed.phase);
+    }
+
     await this.manager.deleteAlarm(this.parsed.originalName);
   }
 }

@@ -58,6 +58,16 @@ export class RecordManager {
   async save() {
     await chrome.storage.local.set({ records: this.#records });
   }
+
+  resetConsecutiveTime(entity) {
+    let sitesToReset = entity instanceof Site ? [entity.name] : entity.sites;
+    const record = this.todayRecord;
+    sitesToReset.forEach((s) => {
+      record[s].totaltime += record[s].consecutivetime;
+      record[s].consecutiveTime = 0;
+    });
+    this.save();
+  }
 }
 
 export const rm = new RecordManager()
