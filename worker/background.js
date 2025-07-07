@@ -149,7 +149,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
   try {
     console.log("changes in storage", changes, area);
     // No need to do anything with logs
-    await handleStorageChange(changes, entitiesCache, area);
+    await handleStorageChange(changes, entitiesCache, rm, area);
   } catch (error) {
     console.error("Error handling storage change:", error);
   }
@@ -158,7 +158,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 // Fires when I alarms has been triggered
 chrome.alarms.onAlarm.addListener(async (alarm) => {
   try {
-    await handleOnAlarm(alarm, entitiesCache);
+    await handleOnAlarm(alarm, entitiesCache, rm);
   } catch (error) {
     logger.error('Error handling onAlarm : ', error);
     await chrome.alarms.clear(alarm.name)
