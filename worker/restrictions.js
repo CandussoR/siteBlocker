@@ -1,3 +1,5 @@
+import { Group } from "./siteAndGroupModels.js";
+
 /**
  * @typedef {Object} ViolationStatus - Object that restrictions return for an AlarmManager
  * @property {boolean} violated - if restriction is violated or not
@@ -78,10 +80,6 @@ export class TimeSlotRestriction {
 import { RecordManager } from "./recordManager.js";
 import { EntitiesCache, Site } from "./siteAndGroupModels.js";
 
-/**
- * Use Case :
- * TotalTimeRestriction(Group, rm, ec)
- */
 export class TotalTimeRestriction {
   /**
    * @typedef {Object} TotalTimeConfig
@@ -89,14 +87,14 @@ export class TotalTimeRestriction {
    * @property {Number} totalTime - total time in seconds
    */
   /**
-   * @param {Site|Group} groupOrSiteObj - the site or group we want to evaluate
+   * @param {Site|Group} entity - the site or group we want to evaluate
    * @param {RecordManager} rm - the RecordManager singleton
    * @param {EntitiesCache} ec - the EntitiesCache singleton
    */
-  constructor(groupOrSiteObj, rm, ec) {
-    this.entity = groupOrSiteObj;
-    /** @type {TotalTimeConfig[]|undefined} */
-    this.restriction = this.entity.todayRestrictions?.totalTime
+  constructor(entity, rm, ec) {
+    this.entity = entity;
+    /** @type {TotalTimeConfig|undefined} */
+    this.restriction = this.#getSmallerRestriction(this.entity.todayRestrictions?.totalTime)
     this.rm = rm;
     this.ec = ec;
   }
@@ -109,24 +107,31 @@ export class TotalTimeRestriction {
    */
   isViolated() {
     if (!this.restriction) {
-      return { violated : false, minutesBeforeRes : undefined }
+      if (this.entity instanceof Site) {
+        const group = this.ec.getGroupByName(this.entity.group) 
+        return group
+          ? this.#getSiteGroupViolation(group)
+          : { violated: false, minutesBeforeRes: undefined };
+      } else if (this.entity instanceof Group) {
+        return { violated : false, minutesBeforeRes : undefined }
+      }
     }
 
     let result = this.entity instanceof Site
-        ? this.#getSiteTimeLeft(this.entity.name)
+        ? this.#calculateSiteTimeLeft(this.entity.name, this.restriction.totalTime)
         : this.#getGroupTimeLeft(this.entity.sites);
+    // Converting in minutes
+    result = result / 60
 
     if (this.entity instanceof Site && result > 0) {
       let group = this.ec.getGroupByName(this.entity.group);
-      let groupRes = this.#getSiteGroupTimeLeft(group);
-      if (groupRes.violated && groupRes.minutesBeforeRes < result) {
+      let groupRes = this.#getSiteGroupViolation(group);
+      if (groupRes.violated || groupRes.minutesBeforeRes < result) {
         return groupRes;
         }
     }
 
-    return result > 0
-      ? { violated: true, minutesBeforeRes: result }
-      : { violated: false, minutesBeforeRes: undefined };
+    return { violated: result > 0 ? false : true, minutesBeforeRes: result }
   }
 
   /**
@@ -134,24 +139,47 @@ export class TotalTimeRestriction {
    * @param {Group} group - the corresponding Group to a site
    * @returns {ViolationStatus} - if the group violates a totalTime restriction or not
    */
-  #getSiteGroupTimeLeft(group) {
+  #getSiteGroupViolation(group) {
     return new TotalTimeRestriction(group, this.rm, this.ec).isViolated();
   }
 
+  /**
+   * 
+   * @param {string[]} targets - names of the sites of group
+   * @returns {Number} - number of minutes for all
+   */
   #getGroupTimeLeft(targets) {
-    return targets.reduce( (sum, t) => this.#getSiteTimeLeft(t) + sum, 0);
+    return targets.reduce(
+      (restrictionLeft, t) => this.#calculateSiteTimeLeft(t, restrictionLeft),
+      this.restriction.totalTime
+    );
   }
 
-  #getSiteTimeLeft(target) {
-    let tsr = this.rm.getTodaySiteRecord(target);
-    return this.#getTimeBeforeRestriction(tsr);
-  }
-
-  #getTimeBeforeRestriction(siteRec) {
+  /**
+   * 
+   * @param {string} target - name of a site
+   * @param {Number} timeLeft - either the initial restriction or what's left of it in seconds
+   * @returns {Number} the timeLeft in seconds
+   */
+  #calculateSiteTimeLeft(target, timeLeft) {
+    let siteRec = this.rm.getTodaySiteRecord(target);
     if (!siteRec.initDate)
-      return (this.restriction.totalTime - siteRec.totalTime) / 60;
+      return (timeLeft - siteRec.totalTime);
 
     let tt = siteRec.totalTime + (new Date() - siteRec.initDate) / 1000;
-    return (this.restriction.totalTime - tt) / 60;
+    return (timeLeft - tt);
+  }
+
+  /**
+   * Just in case, during the creation of restrictions, 
+   * user created to different items with the same day but different values
+   * @param {Array} restrictions 
+   * @returns {TotalTimeConfig} the smaller restriction
+   */
+  #getSmallerRestriction(restrictions) {
+    if (!restrictions) return undefined;
+    else if (restrictions.length === 1)
+      return restrictions[0];
+    return restrictions.sort((a,b) => a.totalTime - b.totalTime)[0];
   }
 }
