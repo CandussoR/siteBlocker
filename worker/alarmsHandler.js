@@ -90,19 +90,16 @@ export async function handleOnAlarm(alarm, entitiesCache, recordManager) {
  * @param {null} endOfRestriction - do not fill, will soon be deleted when handling alarms end better
  */
 async function redirectTabsRestrictedByAlarm(
-  parsedAlarm,
   sitesToBeRedirected,
   tabs,
   endOfRestriction = null
 ) {
-  let targets = parsedAlarm.isGroup ? sitesToBeRedirected.map(x => x.name) : sitesToBeRedirected;
-
   for (let i = 0; i < tabs.length; i++) {
     const tab = tabs[i];
     const url = encodeURIComponent(tab.url);
     const host = encodeURIComponent(new URL(tab.url).host);
 
-    if (!targets.includes(host)) {
+    if (!sitesToBeRedirected.includes(host)) {
       continue;
     }
 
@@ -487,7 +484,7 @@ function parseAlarmName(anAlarm) {
     target : splittedName[0],
     restriction : splittedName[1],
     phase : splittedName[splittedName.length -1],
-    isGroup : anAlarm.name.includes(".")
+    isGroup : !anAlarm.name.includes(".")
   }
 }
 
@@ -504,7 +501,7 @@ function createAlarmHandler(anAlarm, entitiesCache, recordManager) {
     case "time":
       return new TimeSlotAlarmHandler(anAlarm, parsed, entitiesCache);
     case "consecutive":
-      return new ConsecutiveTimeAlarmHandler(anAlarm, parsed, recordManager);
+      return new ConsecutiveTimeAlarmHandler(anAlarm, parsed, entitiesCache, recordManager);
     case "total":
       return new TotalTimeAlarmHandler(anAlarm, parsed, entitiesCache);
     default:
@@ -540,7 +537,7 @@ class TimeSlotAlarmHandler {
       return;
     }
 
-    next = new TimeSlotRestriction(
+    let next = new TimeSlotRestriction(
       entity.todayRestrictions.timeSlot
     ).getFollowingTime();
 
@@ -552,7 +549,6 @@ class TimeSlotAlarmHandler {
 
       let tabs = await chrome.tabs.query({});
       await redirectTabsRestrictedByAlarm(
-        this.parsed,
         this.parsed.isGroup ? entity.sites : [this.parsed.target],
         tabs,
         null
@@ -627,7 +623,6 @@ class TotalTimeAlarmHandler
   async handle() {
     let tabs = await chrome.tabs.query({});
     await redirectTabsRestrictedByAlarm(
-      this.parsed,
       this.parsed.isGroup ? entity.sites : [this.parsed.target],
       tabs,
       null
@@ -665,7 +660,6 @@ class ConsecutiveTimeAlarmHandler {
     if (this.parsed.phase === "begin") {
       let tabs = await chrome.tabs.query({});
       redirectTabsRestrictedByAlarm(
-        this.parsed,
         this.parsed.isGroup ? entity.sites : [this.parsed.target],
         tabs,
         endOfRestriction.toLocaleTimeString()
