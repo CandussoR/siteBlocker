@@ -183,3 +183,110 @@ export class TotalTimeRestriction {
     return restrictions.sort((a,b) => a.totalTime - b.totalTime)[0];
   }
 }
+
+// Exactly the same class as TotalTimeRestriction, but refers to consecutiveTime
+export class ConsecutiveTimeRestriction {
+  /**
+   * @typedef {Object} ConsecutiveTimeConfig
+   * @property {string[]} days - days in english where this restrictions happen
+   * @property {Number} consecutiveTime - consecutive time in seconds
+   * @property {Number} pause - pause in seconds
+   */
+  /**
+   * @param {Site|Group} entity - the site or group we want to evaluate
+   * @param {RecordManager} rm - the RecordManager singleton
+   * @param {EntitiesCache} ec - the EntitiesCache singleton
+   */
+  constructor(entity, rm, ec) {
+    this.entity = entity;
+    /** @type {ConsecutiveTimeConfig|undefined} */
+    this.restriction = this.#getSmallerRestriction(this.entity.todayRestrictions?.consecutiveTime)
+    this.rm = rm;
+    this.ec = ec;
+  }
+
+  /**
+   * @param {Object} Metadata - what site or group is to be checked and how
+   * @param {string} metadata.target - a host or group name
+   * @param {'site'|'group'} metadata.type
+   * @returns {ViolationStatus}
+   */
+  isViolated() {
+    if (!this.restriction) {
+      if (this.entity instanceof Site) {
+        const group = this.ec.getGroupByName(this.entity.group) 
+        return group
+          ? this.#getSiteGroupViolation(group)
+          : { violated: false, minutesBeforeRes: undefined };
+      } else if (this.entity instanceof Group) {
+        return { violated : false, minutesBeforeRes : undefined }
+      }
+    }
+
+    let result = this.entity instanceof Site
+        ? this.#calculateSiteTimeLeft(this.entity.name, this.restriction.consecutiveTime)
+        : this.#getGroupTimeLeft(this.entity.sites);
+    // Converting in minutes
+    result = result / 60
+
+    if (this.entity instanceof Site && result > 0) {
+      let group = this.ec.getGroupByName(this.entity.group);
+      let groupRes = this.#getSiteGroupViolation(group);
+      if (groupRes.violated || groupRes.minutesBeforeRes < result) {
+        return groupRes;
+        }
+    }
+
+    return { violated: result > 0 ? false : true, minutesBeforeRes: result }
+  }
+
+  /**
+   * 
+   * @param {Group} group - the corresponding Group to a site
+   * @returns {ViolationStatus} - if the group violates a consecutiveTime restriction or not
+   */
+  #getSiteGroupViolation(group) {
+    return new ConsecutiveTimeRestriction(group, this.rm, this.ec).isViolated();
+  }
+
+  /**
+   * 
+   * @param {string[]} targets - names of the sites of group
+   * @returns {Number} - number of minutes for all
+   */
+  #getGroupTimeLeft(targets) {
+    return targets.reduce(
+      (restrictionLeft, t) => this.#calculateSiteTimeLeft(t, restrictionLeft),
+      this.restriction.consecutiveTime
+    );
+  }
+
+  /**
+   * 
+   * @param {string} target - name of a site
+   * @param {Number} timeLeft - either the initial restriction or what's left of it in seconds
+   * @returns {Number} the timeLeft in seconds
+   */
+  #calculateSiteTimeLeft(target, timeLeft) {
+    let siteRec = this.rm.getTodaySiteRecord(target);
+    if (!siteRec.initDate)
+      return (timeLeft - siteRec.consecutiveTime);
+
+    let tt = siteRec.consecutiveTime + (new Date() - siteRec.initDate) / 1000;
+    return (timeLeft - tt);
+  }
+
+  /**
+   * Just in case, during the creation of restrictions, 
+   * user created to different items with the same day but different values
+   * @param {Array} restrictions 
+   * @returns {ConsecutiveTimeConfig} the smaller restriction
+   */
+  #getSmallerRestriction(restrictions) {
+    if (!restrictions) return undefined;
+    else if (restrictions.length === 1)
+      return restrictions[0];
+    return restrictions.sort((a,b) => a.consecutiveTime - b.consecutiveTime)[0];
+  }
+}
+
