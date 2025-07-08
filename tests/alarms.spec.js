@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { createAlarms, getItemsWithNewRestrictions, handleOnAlarm, handleStorageChange } from '../../worker/alarmsHandler.js'
+import { createAlarms, getItemsWithNewRestrictions, handleOnAlarm, handleStorageChange } from '../worker/alarmsHandler.js'
 
 
 global.chrome = {

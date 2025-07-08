@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import * as bookkeeping from '../../worker/bookkeeping.js'
+import * as bookkeeping from '../worker/bookkeeping.js'
 import { fakeRecord } from './fakeData.js'
 
 // let todayRecord = {

@@ -40,8 +40,7 @@ export async function createAlarms(entitiesCache) {
  * @param {Object} changes 
  * @param {EntitiesCache} entitiesCache 
  * @param {RecordManager} rm - recordManager singleton
- * @param {*} area 
- * @returns 
+ * @param {string} area 
  */
 export async function handleStorageChange(changes, entitiesCache, rm, area) {
   if (
@@ -85,7 +84,7 @@ export async function handleOnAlarm(alarm, entitiesCache, recordManager) {
 /**
  * 
  * @param {ParsedAlarm} parsedAlarm 
- * @param {Array[Site|string]} sitesToBeRedirected - array containing all the Site objects of a group or the host name
+ * @param {Site[]|string[]} sitesToBeRedirected - array containing all the Site objects of a group or the host name
  * @param {*} tabs 
  * @param {null} endOfRestriction - do not fill, will soon be deleted when handling alarms end better
  */
@@ -492,7 +491,7 @@ function parseAlarmName(anAlarm) {
  * 
  * @param {Alarm} anAlarm 
  * @param {EntitiesCache} entitiesCache 
- * @returns {TimeSlotAlarmHandler | TotalTimeAlarmHandler }
+ * @returns {TimeSlotAlarmHandler | ConsecutiveTimeAlarmHandler | TotalTimeAlarmHandler }
  */
 function createAlarmHandler(anAlarm, entitiesCache, recordManager) {
   let parsed = parseAlarmName(anAlarm)
@@ -640,9 +639,13 @@ class ConsecutiveTimeAlarmHandler {
    * @param {RecordManager} recordManager
    */
   constructor(alarm, parsed, entitiesCache, recordManager) {
+    /** @type {Alarm} */
     this.alarm = alarm;
+    /** @type {ParsedAlarm} */
     this.parsed = parsed;
+    /** @type {EntitiesCache} */
     this.entcache = entitiesCache;
+    /** @type {RecordManager} */
     this.rm = recordManager;
     /** @type {AlarmManager} */
     this.am = new AlarmManager();

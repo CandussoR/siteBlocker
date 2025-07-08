@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Logger, QueueNode } from '../../worker/logger.js';
+import { Logger, QueueNode } from '../worker/logger.js';
 
 global.chrome = {
   storage: {

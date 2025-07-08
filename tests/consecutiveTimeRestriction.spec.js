@@ -1,9 +1,9 @@
 // Exactly the same tests as in totalTimeRestrictions, but with consecutiveTime
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { ConsecutiveTimeRestriction } from '../../worker/restrictions';
-import { Site, Group } from '../../worker/siteAndGroupModels';
-import { RecordManager } from '../../worker/recordManager';
-import { EntitiesCache } from '../../worker/siteAndGroupModels';
+import { ConsecutiveTimeRestriction } from '../worker/restrictions';
+import { Site, Group } from '../worker/siteAndGroupModels';
+import { RecordManager } from '../worker/recordManager';
+import { EntitiesCache } from '../worker/siteAndGroupModels';
 
 describe('ConsecutiveTimeRestriction', () => {
     beforeEach(() => {

@@ -3,10 +3,12 @@
   "scripts": {
     "build:css": "@tailwindcss/cli -i ./ui/css/app.css -o ./dist/app.css --minify",
     "test": "vitest",
-    "coverage": "vitest run --coverage"
+    "coverage": "vitest run --coverage",
+    "doc": "jsdoc -r ./worker"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "jsdoc": "^4.0.4",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.8",
     "vitest": "^2.0.4"

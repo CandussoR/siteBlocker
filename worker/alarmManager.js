@@ -11,8 +11,8 @@ export class AlarmManager {
 
   /**
    *
-   * @param {'consecutiveTime'|'totalTime'|'timeSlots'} constraint
-   * @returns
+   * @param {'consecutiveTime'|'totalTime'|'timeSlots'} [constraint]
+   * @returns {object[]} - an array containing either all alarms or alarms filtered by constraint
    */
   async getCurrentAlarms(constraint = null) {
     if (constraint && !(constraint in this.#mapping)) {

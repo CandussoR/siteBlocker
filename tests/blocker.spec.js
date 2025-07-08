@@ -1,5 +1,5 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { bookkeeping } from '../../worker/bookkeeping.js'
+import { bookkeeping } from '../worker/bookkeeping.js'
 import { fakeRecord } from './fakeData.js'
 
 global.chrome = {

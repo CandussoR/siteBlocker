@@ -1,6 +1,6 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
 import { fakeGroup, fakeSites } from './fakeData.js'
-import { setRecords, cleanRecords } from '../../worker/settingRecord.js'
+import { setRecords, cleanRecords } from '../worker/settingRecord.js'
 
 global.chrome = {
     alarms : {
