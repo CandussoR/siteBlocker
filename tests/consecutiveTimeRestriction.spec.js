@@ -23,8 +23,9 @@ describe('ConsecutiveTimeRestriction', () => {
     ec.groups = [];
 
     const ttr = new ConsecutiveTimeRestriction(site, rm, ec);
-    expect(ttr.isViolated()).toEqual({ violated: false, minutesBeforeRes: undefined });
-  });
+    const res = ttr.isViolated();
+    expect(res.violated).toBe(false);
+    expect(res.minutesBeforeRes).toBe(undefined);  });
 
 it('returns site violated if site exceeds time restriction and site has no group', () => {
     const site = new Site({

@@ -176,9 +176,9 @@ export class TotalTimeRestriction {
         const group = this.ec.getGroupByName(this.entity.group) 
         return group
           ? this.#getSiteGroupViolation(group)
-          : { violated: false, minutesBeforeRes: undefined };
+          : this.#createViolationObject(false)
       } else if (this.entity instanceof Group) {
-        return { violated : false, minutesBeforeRes : undefined }
+        return this.#createViolationObject(false)
       }
     }
 
@@ -196,7 +196,7 @@ export class TotalTimeRestriction {
         }
     }
 
-    return { violated: result > 0 ? false : true, minutesBeforeRes: result }
+    return this.#createViolationObject(result > 0 ? false : true, result)
   }
 
   /**
@@ -247,6 +247,13 @@ export class TotalTimeRestriction {
       return restrictions[0];
     return restrictions.sort((a,b) => a.totalTime - b.totalTime)[0];
   }
+
+  #createViolationObject(v, mbr = undefined) {
+    if (v)
+      return { violated: v, minutesBeforeRes: mbr, restriction: "totalTime" };
+    else return { violated: v, minutesBeforeRes: mbr, restriction: "totalTime" };
+  }
+
 }
 
 // Exactly the same class as TotalTimeRestriction, but refers to consecutiveTime
@@ -282,9 +289,9 @@ export class ConsecutiveTimeRestriction {
         const group = this.ec.getGroupByName(this.entity.group) 
         return group
           ? this.#getSiteGroupViolation(group)
-          : { violated: false, minutesBeforeRes: undefined };
+          : this.#createViolationObject(false);
       } else if (this.entity instanceof Group) {
-        return { violated : false, minutesBeforeRes : undefined }
+        return this.#createViolationObject(false);
       }
     }
 
@@ -302,7 +309,7 @@ export class ConsecutiveTimeRestriction {
         }
     }
 
-    return { violated: result > 0 ? false : true, minutesBeforeRes: result }
+    return this.#createViolationObject(result > 0 ? false : true, result)
   }
 
   /**
@@ -352,5 +359,11 @@ export class ConsecutiveTimeRestriction {
     else if (restrictions.length === 1)
       return restrictions[0];
     return restrictions.sort((a,b) => a.consecutiveTime - b.consecutiveTime)[0];
+  }
+
+  #createViolationObject(v, mbr = undefined) {
+    if (v)
+      return { violated: v, minutesBeforeRes: mbr, restriction: "consecutiveTime" };
+    else return { violated: v, minutesBeforeRes: mbr, restriction: "consecutiveTime" };
   }
 }

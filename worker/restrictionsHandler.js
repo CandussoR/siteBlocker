@@ -1,6 +1,9 @@
 import { checkIfCreateConsecutiveOrTotalTimeAlarm } from "./alarmsHandler.js";
 import { findTodayRestriction } from "./commons.js";
 import { logger } from './logger.js';
+import { RecordManager } from "./recordManager.js";
+import { ConsecutiveTimeRestriction, TimeSlotRestriction, TotalTimeRestriction } from "./restrictions.js";
+import { EntitiesCache } from "./siteAndGroupModels.js";
 
 
 
@@ -404,4 +407,20 @@ function checkSlots(slots) {
   }
 
   return false;
+}
+
+/**
+ * 
+ * @param {string} host - name of site
+ * @param {EntitiesCache} ec - singleton containing entities
+ * @param {RecordManager} rm - singleton handling records
+ * @return {ViolationStatus} - an enhanced version of ViolationStatus with restriction type and phase for alarm
+ */
+export function isRestrictedNew(host, ec, rm) {
+  const site = ec.getSiteByName(host);
+  const tsr = new TimeSlotRestriction(site.todayRestrictions?.timeSlot).isViolated();
+  const ttr = new TotalTimeRestriction(site, rm, ec).isViolated();
+  const ctr = new ConsecutiveTimeRestriction(site, rm, ec).isViolated();
+  console.log([tsr, ttr, ctr])
+  return [tsr, ttr, ctr].sort((a,b) => a.minutesBeforeRes - b.minutesBeforeRes)[0]
 }
