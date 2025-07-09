@@ -31,14 +31,15 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 
 chrome.runtime.onStartup.addListener(async () => {
-  await initializeSingletons(entitiesCache, rm);
-
   await chrome.storage.local.set({ busy: true });
+
+  await initializeSingletons(entitiesCache, rm);
 
   let today = new Date().toISOString().split("T")[0];
   let records = await setRecords(today);
   if (!records) {
     await chrome.storage.local.set({ busy: false });
+    await handleAlarms(entitiesCache);
     return;
   }
 
@@ -48,7 +49,6 @@ chrome.runtime.onStartup.addListener(async () => {
 
   await chrome.alarms.clearAll();
   await chrome.storage.local.set({ busy: false });
-
   await handleAlarms(entitiesCache);
 });
 
