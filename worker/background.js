@@ -126,7 +126,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     return;
 
   const am = new AlarmManager(await chrome.alarms.getAll())
-  if (am.getEndAlarms(host).length || await isRestricted(host, sites)) {
+  if (am.getEndAlarms(host).length || (await isRestricted(host, entitiesCache, rm)).violated) {
     sendCloseAndRedirect(tabId, host, url);
     return;
   }
