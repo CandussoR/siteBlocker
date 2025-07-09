@@ -6,7 +6,7 @@ import {
   getSiteNamesOfGroup,
 } from "./commons.js";
 import { logger } from "./logger.js";
-import { EntitiesCache } from "./siteAndGroupModels.js";
+import { EntitiesCache, Group } from "./siteAndGroupModels.js";
 import { AlarmManager } from "./alarmManager.js";
 import { TimeSlotRestriction } from "./restrictions.js";
 import { RecordManager } from "./recordManager.js";
@@ -515,12 +515,12 @@ class TimeSlotAlarmHandler {
    * @param {ParsedAlarm} parsed 
    * @param {EntitiesCache} entitiesCache 
    */
-  constructor(alarm, parsed, entitiesCache) {
+  constructor(alarm, parsed, entitiesCache, alarmManager = null) {
     this.alarm = alarm;
     this.parsed = parsed;
     this.entcache = entitiesCache;
     /** @type {AlarmManager} */
-    this.manager = new AlarmManager();
+    this.manager = alarmManager ? alarmManager : new AlarmManager();
   }
 
   /**
@@ -570,7 +570,7 @@ class TimeSlotAlarmHandler {
 
     for (let group of this.entcache.groups) {
       if (!group.todayRestrictions?.timeSlot) continue;
-      let next = new TimeSlotRestriction(group.todayRestrictions.timeSlot).getFollowingTime();
+      let next = new TimeSlotRestriction(group, this.entcache).getFollowingTime();
       if (!next) continue;
       await this.manager.setAlarm(`${group.name}-time-slot-restriction-${next.phase}`, {
         delayInMinutes: this.#calculateDelay(next.time),
@@ -579,7 +579,7 @@ class TimeSlotAlarmHandler {
 
     for (let site of this.entcache.sites) {
       if (!site.todayRestrictions?.timeSlot) continue;
-      let next = new TimeSlotRestriction(site.todayRestrictions.timeSlot).getFollowingTime();
+      let next = new TimeSlotRestriction(site, this.entcache).getFollowingTime();
       if (!next) continue;
       await this.manager.setAlarm(`${site.name}-time-slot-restriction-${next.phase}`, {
         delayInMinutes: this.#calculateDelay(next.time),
@@ -608,12 +608,12 @@ class TotalTimeAlarmHandler
    * @param {ParsedAlarm} parsed 
    * @param {EntitiesCache} entitiesCache 
    */
-  constructor(alarm, parsed, entitiesCache) {
+  constructor(alarm, parsed, entitiesCache, alarmManager = null) {
     this.alarm = alarm;
     this.parsed = parsed;
     this.entcache = entitiesCache;
     /** @type {AlarmManager} */
-    this.manager = new AlarmManager();
+    this.manager = alarmManager ? alarmManager : new AlarmManager();
   }
 
   /**
