@@ -5,6 +5,7 @@ import { Group } from "./siteAndGroupModels.js";
  * @property {boolean} violated - if restriction is violated or not
  * @property {Number} minutesBeforeRes - Minutes calculated before restriction
  * @property {'timeSlot'|'totalTime'|'consecutiveTime'} restriction - name of the restriction
+ * @property {string} entity - name of the entity linked to that ViolationStatus object
  */
 
 // Represents a collection of time slot restrictions for a given entity (e.g., site or group)
@@ -34,22 +35,22 @@ export class TimeSlotRestriction {
   isViolated() {
     if (!this.restriction) {
       if (this.entity instanceof Site) {
-        const group = this.ec.getGroupByName(this.entity.group)
+        const group = this.ec.getGroupByName(this.entity.group);
         return group
           ? this.#getGroupViolation(group)
-          : this.#createViolationObject(false)
+          : this.#createViolationObject(false);
       } else if (this.entity instanceof Group) {
-        return this.#createViolationObject(false)
+        return this.#createViolationObject(false);
       }
     }
-    let result = this.#isEntityViolated()
-    if (this.entity instanceof Site && !result.violated ) {
+    let result = this.#isEntityViolated();
+    if (this.entity instanceof Site && !result.violated) {
       let group = this.ec.getGroupByName(this.entity.group);
       if (!group) return result;
       let groupRes = this.#getGroupViolation(group);
       if (this.#shouldReturnGroupRes()) {
         return groupRes;
-        }
+      }
     }
 
     return result;
@@ -82,9 +83,11 @@ export class TimeSlotRestriction {
   }
 
   #shouldReturnGroupRes() {
-    return groupRes.violated 
-      || (!result.minutesBeforeRes && groupRes.minutesBeforeRes) 
-      || groupRes.minutesBeforeRes < result.minutesBeforeRes
+    return (
+      groupRes.violated ||
+      (!result.minutesBeforeRes && groupRes.minutesBeforeRes) ||
+      groupRes.minutesBeforeRes <= result.minutesBeforeRes
+    );
   }
 
   /**
@@ -136,9 +139,12 @@ export class TimeSlotRestriction {
   }
 
   #createViolationObject(v, mbr = undefined) {
-    if (v)
-      return { violated: v, minutesBeforeRes: mbr, restriction: "timeSlot" };
-    else return { violated: v, minutesBeforeRes: mbr, restriction: "timeSlot" };
+    return {
+      violated: v,
+      minutesBeforeRes: mbr,
+      restriction: "timeSlot",
+      entity: this.entity.name,
+    };
   }
 }
 
@@ -159,7 +165,9 @@ export class TotalTimeRestriction {
   constructor(entity, rm, ec) {
     this.entity = entity;
     /** @type {TotalTimeConfig|undefined} */
-    this.restriction = this.#getSmallerRestriction(this.entity.todayRestrictions?.totalTime)
+    this.restriction = this.#getSmallerRestriction(
+      this.entity.todayRestrictions?.totalTime
+    );
     this.rm = rm;
     this.ec = ec;
   }
@@ -173,34 +181,39 @@ export class TotalTimeRestriction {
   isViolated() {
     if (!this.restriction) {
       if (this.entity instanceof Site) {
-        const group = this.ec.getGroupByName(this.entity.group) 
+        const group = this.ec.getGroupByName(this.entity.group);
         return group
           ? this.#getSiteGroupViolation(group)
-          : this.#createViolationObject(false)
+          : this.#createViolationObject(false);
       } else if (this.entity instanceof Group) {
-        return this.#createViolationObject(false)
+        return this.#createViolationObject(false);
       }
     }
 
-    let result = this.entity instanceof Site
-        ? this.#calculateSiteTimeLeft(this.entity.name, this.restriction.totalTime)
+    let result =
+      this.entity instanceof Site
+        ? this.#calculateSiteTimeLeft(
+            this.entity.name,
+            this.restriction.totalTime
+          )
         : this.#getGroupTimeLeft(this.entity.sites);
     // Converting in minutes
-    result = result / 60
+    result = result / 60;
 
     if (this.entity instanceof Site && result > 0) {
       let group = this.ec.getGroupByName(this.entity.group);
+      if (!group) return this.#createViolationObject(false, result);
       let groupRes = this.#getSiteGroupViolation(group);
-      if (groupRes.violated || groupRes.minutesBeforeRes < result) {
+      if (groupRes.violated || groupRes.minutesBeforeRes <= result) {
         return groupRes;
-        }
+      }
     }
 
-    return this.#createViolationObject(result > 0 ? false : true, result)
+    return this.#createViolationObject(result > 0 ? false : true, result);
   }
 
   /**
-   * 
+   *
    * @param {Group} group - the corresponding Group to a site
    * @returns {ViolationStatus} - if the group violates a totalTime restriction or not
    */
@@ -209,7 +222,7 @@ export class TotalTimeRestriction {
   }
 
   /**
-   * 
+   *
    * @param {string[]} targets - names of the sites of group
    * @returns {Number} - number of minutes for all
    */
@@ -221,39 +234,39 @@ export class TotalTimeRestriction {
   }
 
   /**
-   * 
+   *
    * @param {string} target - name of a site
    * @param {Number} timeLeft - either the initial restriction or what's left of it in seconds
    * @returns {Number} the timeLeft in seconds
    */
   #calculateSiteTimeLeft(target, timeLeft) {
     let siteRec = this.rm.getTodaySiteRecord(target);
-    if (!siteRec.initDate)
-      return (timeLeft - siteRec.totalTime);
+    if (!siteRec.initDate) return timeLeft - siteRec.totalTime;
 
     let tt = siteRec.totalTime + (new Date() - siteRec.initDate) / 1000;
-    return (timeLeft - tt);
+    return timeLeft - tt;
   }
 
   /**
-   * Just in case, during the creation of restrictions, 
+   * Just in case, during the creation of restrictions,
    * user created to different items with the same day but different values
-   * @param {Array} restrictions 
+   * @param {Array} restrictions
    * @returns {TotalTimeConfig} the smaller restriction
    */
   #getSmallerRestriction(restrictions) {
     if (!restrictions) return undefined;
-    else if (restrictions.length === 1)
-      return restrictions[0];
-    return restrictions.sort((a,b) => a.totalTime - b.totalTime)[0];
+    else if (restrictions.length === 1) return restrictions[0];
+    return restrictions.sort((a, b) => a.totalTime - b.totalTime)[0];
   }
 
   #createViolationObject(v, mbr = undefined) {
-    if (v)
-      return { violated: v, minutesBeforeRes: mbr, restriction: "totalTime" };
-    else return { violated: v, minutesBeforeRes: mbr, restriction: "totalTime" };
+    return {
+      violated: v,
+      minutesBeforeRes: mbr,
+      restriction: "totalTime",
+      entity: this.entity.name,
+    };
   }
-
 }
 
 // Exactly the same class as TotalTimeRestriction, but refers to consecutiveTime
@@ -295,6 +308,7 @@ export class ConsecutiveTimeRestriction {
       }
     }
 
+    
     let result = this.entity instanceof Site
         ? this.#calculateSiteTimeLeft(this.entity.name, this.restriction.consecutiveTime)
         : this.#getGroupTimeLeft(this.entity.sites);
@@ -303,8 +317,9 @@ export class ConsecutiveTimeRestriction {
 
     if (this.entity instanceof Site && result > 0) {
       let group = this.ec.getGroupByName(this.entity.group);
+      if (!group) return this.#createViolationObject(false, result);
       let groupRes = this.#getSiteGroupViolation(group);
-      if (groupRes.violated || groupRes.minutesBeforeRes < result) {
+      if (groupRes.violated || (groupRes.minutesBeforeRes <= result)) {
         return groupRes;
         }
     }
@@ -327,10 +342,11 @@ export class ConsecutiveTimeRestriction {
    * @returns {Number} - number of minutes for all
    */
   #getGroupTimeLeft(targets) {
-    return targets.reduce(
+    let gtl = targets.reduce(
       (restrictionLeft, t) => this.#calculateSiteTimeLeft(t, restrictionLeft),
       this.restriction.consecutiveTime
     );
+    return gtl
   }
 
   /**
@@ -343,7 +359,6 @@ export class ConsecutiveTimeRestriction {
     let siteRec = this.rm.getTodaySiteRecord(target);
     if (!siteRec.initDate)
       return (timeLeft - siteRec.consecutiveTime);
-
     let tt = siteRec.consecutiveTime + (new Date() - siteRec.initDate) / 1000;
     return (timeLeft - tt);
   }
@@ -362,8 +377,11 @@ export class ConsecutiveTimeRestriction {
   }
 
   #createViolationObject(v, mbr = undefined) {
-    if (v)
-      return { violated: v, minutesBeforeRes: mbr, restriction: "consecutiveTime" };
-    else return { violated: v, minutesBeforeRes: mbr, restriction: "consecutiveTime" };
+    return {
+      violated: v,
+      minutesBeforeRes: mbr,
+      restriction: "consecutiveTime",
+      name: this.entity.name,
+    };
   }
 }
