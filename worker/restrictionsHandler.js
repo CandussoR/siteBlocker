@@ -1,3 +1,4 @@
+import { logger } from "./logger.js";
 import { RecordManager } from "./recordManager.js";
 import { ConsecutiveTimeRestriction, TimeSlotRestriction, TotalTimeRestriction } from "./restrictions.js";
 import { EntitiesCache } from "./siteAndGroupModels.js";
@@ -11,6 +12,10 @@ import { EntitiesCache } from "./siteAndGroupModels.js";
  */
 export function isRestricted(host, ec, rm) {
   const site = ec.getSiteByName(host);
+  if (!site) {
+    logger.error("isRestricted host is", host, "and is watched but no corresponding site")
+    throw new Error("Site should have been found")
+  }
 
   if (
     !site.todayRestrictions &&
