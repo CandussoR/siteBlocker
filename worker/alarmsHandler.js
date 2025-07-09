@@ -508,7 +508,7 @@ function createAlarmHandler(anAlarm, entitiesCache, recordManager) {
   }
 }
 
-class TimeSlotAlarmHandler {
+export class TimeSlotAlarmHandler {
   /**
    * 
    * @param {Alarm} alarm 
@@ -676,7 +676,6 @@ class ConsecutiveTimeAlarmHandler {
       this.rm.resetConsecutiveTime(entity);
     } else if (this.parsed.phase === "end") {
       this.rm.resetConsecutiveTime(entity);
-      // Notify redirected tabs if there are ?
     } else {
       throw new Error("Wrong phase is being called", this.parsed.phase);
     }
