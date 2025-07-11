@@ -101,7 +101,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (!url && !("audible" in changeInfo))
     return;
 
-  if (url.includes("ui/redirected/redirected.html")) {
+  if (url?.includes("ui/redirected/redirected.html")) {
     await processOrEnqueue("close", tabId, new URL(url).host)
     return;
   } else if (isAppPageOrNewTab(url)) {
@@ -115,25 +115,29 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       return;
   }
 
-  let sites = await getSites();
-  if (!sites.length) 
+  if (!entitiesCache.sites.length) 
     return;
 
-  if (!url) 
-    url = tab.url
+  if (!url) url = tab.url
   let host = tab.incognito ? "private" : new URL(url).host;
-  if (!isInWatchedList(sites, host)) 
+  if (!isInWatchedList(entitiesCache.sites, host)) 
     return;
 
   const am = new AlarmManager(await chrome.alarms.getAll())
-  if (am.getEndAlarms(host).length || (await isRestricted(host, entitiesCache, rm)).violated) {
+  const violationObj = await isRestricted(host, entitiesCache, rm);
+  if (
+    am.hasEndAlarm(host, entitiesCache.getSiteByName(host)?.group) ||
+    violationObj.violated
+  ) {
     sendCloseAndRedirect(tabId, host, url);
     return;
   }
 
+
   let flag = "open";
-  if ("audible in changeInfo")
+  if ("audible" in changeInfo)
     flag = changeInfo.audible ? "audible-start" : "audible-end";
+  if (flag === "open") am.handleRestrictionAlarm({host : host, vs : violationObj})
 
   logger.warning(`processOrEnqueuing ${flag} for tabId ${tabId} with host ${host}`)
   await processOrEnqueue(flag, tabId, host);
@@ -179,11 +183,12 @@ function changeInUrl(changeInfo) {
   return changeInfo.pendingUrl || changeInfo.url;
 }
 function isAppPageOrNewTab(url) {
-  return url.includes("chrome://newtab/") || url.includes("ui/")
+  return url?.includes("chrome://newtab/") || url?.includes("ui/")
 }
 function isInWatchedList(sites, host) {
   return sites.map((x) => x.name).includes(host)
 }
+
 async function sendCloseAndRedirect(tabId, host, url) {
     logger.debug("sendCloseAndRedirect : checked if isRestricted, processing close and redirecting")
     await processOrEnqueue("close", tabId, host);
