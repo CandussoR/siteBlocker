@@ -672,11 +672,9 @@ class ConsecutiveTimeAlarmHandler {
         this.parsed.target + "-consecutive-time-restriction-end",
         { delayInMinutes: entity.todayRestrictions?.consecutiveTime.pause / 60 }
       );
-    } else if (this.parsed.phase === "check") {
+    } else if (this.parsed.phase === "check" || this.parsed.phase === "end") {
       this.rm.resetConsecutiveTime(entity);
-    } else if (this.parsed.phase === "end") {
-      this.rm.resetConsecutiveTime(entity);
-    } else {
+    }  else {
       throw new Error("Wrong phase is being called", this.parsed.phase);
     }
 
