@@ -381,7 +381,7 @@ export class ConsecutiveTimeRestriction {
       violated: v,
       minutesBeforeRes: mbr,
       restriction: "consecutiveTime",
-      name: this.entity.name,
+      entity: this.entity.name,
     };
   }
 }
