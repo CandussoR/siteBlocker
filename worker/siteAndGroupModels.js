@@ -54,6 +54,7 @@ export class EntitiesCache {
     this.groups = [];
     // Used to instantiate group
     this.rawSites = [];
+    this.initialized = false;
   }
 
   async initialize() {
@@ -65,27 +66,10 @@ export class EntitiesCache {
     this.rawSites = sites;
     this.sites = sites.map(x => new Site(x));
     this.groups = groups.map(x => new Group(x, sites));
+    this.initialized = true;
     } catch(e) {
         console.error(e);
     }
-  }
-
-  async getSites() {
-    let { sites = [] } = await chrome.storage.local.get("sites");
-    if (chrome.runtime.lastError) {
-      console.error("An error occurred while fetching your settings.");
-      return;
-    }
-    return sites;
-  }
-
-  async getGroups() {
-    let { sites = [] } = await chrome.storage.local.get("sites");
-    if (chrome.runtime.lastError) {
-      console.error("An error occurred while fetching your settings.");
-      return;
-    }
-    return sites;
   }
 
   /**

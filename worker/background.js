@@ -52,36 +52,39 @@ chrome.runtime.onStartup.addListener(async () => {
   await handleAlarms(entitiesCache);
 });
 
-import { getSites } from "./commons.js";
 import { isRestricted } from "./restrictionsHandler.js";
  
 // Fires when the active tab in a window changes.
 chrome.tabs.onActivated.addListener(async (activeInfo) => {
+  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
+
   let tab = await chrome.tabs.get(activeInfo.tabId);
   if (!tab.url) return;
 
   logger.debug("onActivated : changes on this tab", activeInfo);
   let host = new URL(tab.url).host;
-  if (!isInWatchedList(await getSites(), host)) {
+  if (!isInWatchedList(entitiesCache.sites, host)) {
     await processOrEnqueue("no-focus");
     return;
   }
 
+  if (host == this.rm.getSiteFocused()) return;
   await processOrEnqueue("change-focus", activeInfo.tabId, host);
 });
 
 // Fires if window is focused or not
 chrome.windows.onFocusChanged.addListener(async (windowId) => {
+  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
+
   let [tab] = await chrome.tabs.query({ active: true });
   logger.debug(
     "onFocusChanged refocused window on following tab",
-    tab, tab.id
+    tab, tab?.id
   );
 
   if (windowId === -1 || !tab.id) {
     await processOrEnqueue("no-focus");
   } else {
-    let sites = await getSites();
     try {
       if ( !tab.url || isAppPageOrNewTab(tab.url)) return;
     } catch(error) {
@@ -90,7 +93,8 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
     }
 
     let host = new URL(tab.url).host;
-    if (!isInWatchedList(sites, host)) return;
+    if (!isInWatchedList(entitiesCache.sites, host)) return;
+
     await processOrEnqueue("change-focus", tab.id, host);
   }
 });
@@ -114,6 +118,7 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     if (!restrictPrivate) 
       return;
   }
+  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
 
   if (!entitiesCache.sites.length) 
     return;
@@ -133,7 +138,6 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
     return;
   }
 
-
   let flag = "open";
   if ("audible" in changeInfo)
     flag = changeInfo.audible ? "audible-start" : "audible-end";
@@ -144,12 +148,15 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 chrome.tabs.onRemoved.addListener(async (tabId, _) => {
+  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
+  // check if tabId site is still audible or not FIRST
   await processOrEnqueue("close", tabId);
 });
 
 import { handleStorageChange, handleOnAlarm } from "./alarmsHandler.js";
 
 chrome.storage.onChanged.addListener(async (changes, area) => {
+  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
   try {
     console.log("changes in storage", changes, area);
     // No need to do anything with logs
@@ -161,6 +168,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
 
 // Fires when I alarms has been triggered
 chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
   try {
     await handleOnAlarm(alarm, entitiesCache, rm);
   } catch (error) {
