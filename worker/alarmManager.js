@@ -28,7 +28,7 @@ export class AlarmManager {
   }
   async deleteAlarm(anAlarm) {
     await chrome.alarms.clear(anAlarm.name);
-    this.alarms.filter((x) => x.name === anAlarm);
+    this.alarms = this.alarms?.filter((x) => x.name === anAlarm);
   }
 
   /**
@@ -78,7 +78,7 @@ export class AlarmManager {
    * @returns {boolean} if there is one or more end alarm
    */
   hasEndAlarm(host, group) {
-    return this.getEndAlarms(host).length || (group && this.getEndAlarms(group))
+    return this.getEndAlarms(host).length || (group && this.getEndAlarms(group).length)
   }
 
 
