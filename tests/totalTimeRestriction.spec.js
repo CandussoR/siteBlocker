@@ -64,7 +64,6 @@ it('returns site violated if site exceeds time restriction and site has no group
 
     const ttr = new TotalTimeRestriction(site, rm, ec);
     const res = ttr.isViolated();
-    console.log(res)
     expect(res.violated).toBe(true);
     expect(res.minutesBeforeRes).toBeLessThan(0);
   })
