@@ -13,7 +13,7 @@ import { EntitiesCache } from "./siteAndGroupModels.js";
 export function isRestricted(host, ec, rm) {
   const site = ec.getSiteByName(host);
   if (!site) {
-    logger.error("isRestricted host is", host, "and is watched but no corresponding site")
+    logger.error("isRestricted host is", host, "and is watched but no corresponding site. EntitiesCache is ", ec.sites.map(x => x.name), host)
     throw new Error("Site should have been found")
   }
 
