@@ -10,6 +10,7 @@ import { EntitiesCache, Group } from "./siteAndGroupModels.js";
 import { AlarmManager } from "./alarmManager.js";
 import { TimeSlotRestriction } from "./restrictions.js";
 import { RecordManager } from "./recordManager.js";
+import { TabManager } from "./tabManager.js";
 
 /**
  * 
@@ -32,7 +33,7 @@ async function alarmsAreSet() {
  */
 export async function createAlarms(entitiesCache) {
   let tsah = new TimeSlotAlarmHandler(null, null, entitiesCache)
-  await tsah.initializeEveryAlarm();
+  await tsah.initializeEveryAlarm(new AlarmManager());
 }
 
 /**
@@ -61,10 +62,7 @@ export async function handleStorageChange(changes, entitiesCache, rm, area) {
   await chrome.alarms.clearAll();
 
   let tsah = new TimeSlotAlarmHandler(null, null, entitiesCache)
-  await tsah.initializeEveryAlarm();
-
-  let key = Object.keys(changes).shift()
-  await createConsecutiveTimeAlarms(changes[key].newValue, rm.todayRecord);
+  await tsah.initializeEveryAlarm(new AlarmManager);
 
   logger.info("TodayRecord is now", rm.todayRecord)
   await rm.save();
@@ -74,144 +72,11 @@ export async function handleOnAlarm(alarm, entitiesCache, recordManager) {
   logger.info("HandleOnAlarm : ", alarm);
   let handler = createAlarmHandler(alarm, entitiesCache, recordManager);
   try {
-    handler.handle()
+    handler.handle(new TabManager(), new AlarmManager())
   } catch(error) {
     logger.error("Problem during the handling of the alarm", error);
     throw new Error("Problem during the handling of the alarm", error);
   }
-}
-
-/**
- * 
- * @param {ParsedAlarm} parsedAlarm 
- * @param {Site[]|string[]} sitesToBeRedirected - array containing all the Site objects of a group or the host name
- * @param {*} tabs 
- * @param {null} endOfRestriction - do not fill, will soon be deleted when handling alarms end better
- */
-async function redirectTabsRestrictedByAlarm(
-  sitesToBeRedirected,
-  tabs,
-  endOfRestriction = null
-) {
-  for (let i = 0; i < tabs.length; i++) {
-    const tab = tabs[i];
-    const url = encodeURIComponent(tab.url);
-    const host = encodeURIComponent(new URL(tab.url).host);
-
-    if (!sitesToBeRedirected.includes(host)) {
-      continue;
-    }
-
-    logger.warning(`Tab ${tab.id} should be redirected from ${tab.url}`);
-    await chrome.tabs.update(tab.id, {
-      url: chrome.runtime.getURL(
-        `ui/redirected/redirected.html?url=${url}&host=${host}${
-          endOfRestriction ? "&eor=" + endOfRestriction : ""
-        }`
-      ),
-    });
-  }
-}
-
-/**
- *
- * First written to handle from handleOnStorageChange, so is either group or sites,
- * and takes every value in newChanges (all sites or all groups)
- * @param {Array} items - and array of strings (names of groups or sites)
- * @param {Object} record - current day record
- * @returns record
- */
-export async function createConsecutiveTimeAlarms(items, record) {
-  let currentDay = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(
-    new Date()
-  );
-  let isGroup = !items.find((x) => x.name.includes("."));
-
-  if (isGroup) {
-    for (let i = 0; i < items.length; i++) {
-      let todayCt = findTodayRestriction(
-        currentDay,
-        items[i].restrictions,
-        "consecutiveTime"
-      );
-      if (!todayCt) continue;
-
-      let groupSum = 0;
-      let sites = await getSiteNamesOfGroup(items[i].name);
-      // logger.debug("Tracking sites undefined error. Sites are :", sites, sites.map((s) => record[s]))
-      if (!sites.length) continue;
-      sites.forEach((s) => {
-        if (!record[s].consecutiveTime && record[s].initDate) {
-          groupSum += (Date.now() - record[s].initDate) / 1000;
-        } else {
-          record[s].consecutiveTime = record[s].consecutiveTime || 0;
-          groupSum += record[s].consecutiveTime;
-        }
-      });
-
-      if (groupSum === 0) continue;
-      if (groupSum < todayCt.consecutiveTime) {
-        let delay =
-          (new Date(
-            new Date().getTime() + (todayCt.consecutiveTime - groupSum) * 1000
-          ) -
-            Date.now()) /
-          1000 /
-          60;
-        await chrome.alarms.create(
-          `${items[i].name}-consecutive-time-restriction-begin`,
-          { delayInMinutes: delay }
-        );
-      }
-      if (groupSum >= todayCt.consecutiveTime) {
-        let delay =
-          (new Date(new Date().getTime() + todayCt.pause * 1000) - Date.now()) /
-          1000 /
-          60;
-        await chrome.alarms.create(
-          `${items[i].name}-consecutive-time-restriction-end`,
-          { delayInMinutes: delay }
-        );
-      }
-    }
-
-    return record;
-  }
-
-  for (let j = 0; j < items.length; j++) {
-    let { name, restrictions } = items[j];
-    let itemRecord = record[name];
-
-    let todayConsecutiveTime = findTodayRestriction(
-      currentDay,
-      restrictions,
-      "consecutiveTime"
-    );
-
-    if (itemRecord.consecutiveTime) {
-      itemRecord.totalTime += itemRecord.consecutiveTime;
-    }
-
-    if (!todayConsecutiveTime) {
-      delete itemRecord.consecutiveTime;
-      continue;
-    }
-
-    if (!itemRecord.initDate) {
-      itemRecord.consecutiveTime = 0;
-      continue;
-    }
-
-    if (itemRecord.initDate && !itemRecord.consecutiveTime) {
-      let delay = (Date.now() - itemRecord.initDate) / 1000 / 60;
-      await chrome.alarms.create(
-        `${items[j].name}-consecutive-time-restriction-begin`,
-        { delayInMinutes: delay }
-      );
-    }
-  }
-
-  return record;
 }
 
 /**
@@ -264,25 +129,24 @@ function createAlarmHandler(anAlarm, entitiesCache, recordManager) {
   }
 }
 
-export class TimeSlotAlarmHandler {
+class TimeSlotAlarmHandler {
   /**
    * 
    * @param {Alarm} alarm 
    * @param {ParsedAlarm} parsed 
    * @param {EntitiesCache} entitiesCache 
    */
-  constructor(alarm, parsed, entitiesCache, alarmManager = null) {
+  constructor(alarm, parsed, entitiesCache) {
     this.alarm = alarm;
     this.parsed = parsed;
     this.entcache = entitiesCache;
-    /** @type {AlarmManager} */
-    this.manager = alarmManager ? alarmManager : new AlarmManager();
   }
 
   /**
    * Handles a Time Slot alarm.
+   * @param {TabManager} tabManager
    */
-  async handle() {
+  async handle(tabManager, alarmManager) {
     let entity = this.parsed.isGroup
       ? this.entcache.getGroupByName(this.parsed.target)
       : this.entcache.getSiteByName(this.parsed.target);
@@ -292,43 +156,42 @@ export class TimeSlotAlarmHandler {
       return;
     }
 
-    let next = new TimeSlotRestriction(
-      entity.todayRestrictions.timeSlot
-    ).getFollowingTime();
+    let next = new TimeSlotRestriction(entity, this.entcache).getFollowingTime()
 
     if (this.parsed.phase === "begin") {
-      await this.manager.setAlarm(
+      await alarmManager.setAlarm(
         `${this.parsed.target}-time-slot-restriction-end`,
         { delayInMinutes: this.#calculateDelay(next.time) }
       );
 
-      let tabs = await chrome.tabs.query({});
-      await redirectTabsRestrictedByAlarm(
+      const tabs = await tabManager.getAll();
+      await tabManager.redirectTabsRestrictedByAlarm(
         this.parsed.isGroup ? entity.sites : [this.parsed.target],
         tabs,
-        null
+        next.time
       );
     } else if (this.parsed.phase === "end" && next) {
-      await this.manager.setAlarm(
+      await alarmManager.setAlarm(
         `${this.parsed.target}-time-slot-restriction-begin`,
         { delayInMinutes: this.#calculateDelay(next.time) }
       );
     }
 
-    await this.manager.deleteAlarm(this.parsed.originalName);
+    await alarmManager.deleteAlarm(this.parsed.originalName);
   }
 
   /**
    * Create all the time slot alarms.
    * Used for initializations of extension or reset following storage change.
+   * @param {AlarmManager}
    */
-  async initializeEveryAlarm() {
+  async initializeEveryAlarm(alarmManager) {
 
     for (let group of this.entcache.groups) {
       if (!group.todayRestrictions?.timeSlot) continue;
       let next = new TimeSlotRestriction(group, this.entcache).getFollowingTime();
       if (!next) continue;
-      await this.manager.setAlarm(`${group.name}-time-slot-restriction-${next.phase}`, {
+      await alarmManager.setAlarm(`${group.name}-time-slot-restriction-${next.phase}`, {
         delayInMinutes: this.#calculateDelay(next.time),
       });
     }
@@ -337,7 +200,7 @@ export class TimeSlotAlarmHandler {
       if (!site.todayRestrictions?.timeSlot) continue;
       let next = new TimeSlotRestriction(site, this.entcache).getFollowingTime();
       if (!next) continue;
-      await this.manager.setAlarm(`${site.name}-time-slot-restriction-${next.phase}`, {
+      await alarmManager.setAlarm(`${site.name}-time-slot-restriction-${next.phase}`, {
         delayInMinutes: this.#calculateDelay(next.time),
       });
     }
@@ -364,28 +227,29 @@ class TotalTimeAlarmHandler
    * @param {ParsedAlarm} parsed 
    * @param {EntitiesCache} entitiesCache 
    */
-  constructor(alarm, parsed, entitiesCache, alarmManager = null) {
+  constructor(alarm, parsed, entitiesCache) {
     this.alarm = alarm;
     this.parsed = parsed;
     this.entcache = entitiesCache;
-    /** @type {AlarmManager} */
-    this.manager = alarmManager ? alarmManager : new AlarmManager();
   }
 
   /**
-   * Handle the alarm for the beginning of the restriction
+   * Handles a Time Slot alarm.
+   * @param {TabManager} tabManager
+   * @param {AlarmManager} alarmManager
    */
-  async handle() {
+  async handle(tabManager, alarmManager) {
     let tabs = await chrome.tabs.query({});
-    await redirectTabsRestrictedByAlarm(
+    await tabManager.redirectTabsRestrictedByAlarm(
       this.parsed.isGroup ? entity.sites : [this.parsed.target],
       tabs,
       null
     );
-    await this.manager.deleteAlarm(this.parsed.originalName);
+    await alarmManager.deleteAlarm(this.parsed.originalName);
   }
 }
 
+export
 class ConsecutiveTimeAlarmHandler {
   /**
    *
@@ -403,28 +267,30 @@ class ConsecutiveTimeAlarmHandler {
     this.entcache = entitiesCache;
     /** @type {RecordManager} */
     this.rm = recordManager;
-    /** @type {AlarmManager} */
-    this.am = new AlarmManager();
   }
 
-  async handle() {
+  /**
+   * Handles a Time Slot alarm.
+   * @param {TabManager} tabManager
+   */
+  async handle(tabManager, am = new AlarmManager()) {
     let entity = this.parsed.isGroup
       ? this.entcache.getGroupByName(this.parsed.target)
       : this.entcache.getSiteByName(this.parsed.target);
 
     let endOfRestriction = new Date();
-    let pause = entity.todayRestrictions?.consecutiveTime.pause;
-    endOfRestriction.getTime() + pause * 1000
+    let pause = entity.todayRestrictions?.consecutiveTime[0].pause;
+    endOfRestriction = new Date(endOfRestriction.getTime() + pause * 1000)
 
     if (this.parsed.phase === "begin") {
-      let tabs = await chrome.tabs.query({});
-      redirectTabsRestrictedByAlarm(
+      let tabs = tabManager.getAll();
+      tabManager.redirectTabsRestrictedByAlarm(
         this.parsed.isGroup ? entity.sites : [this.parsed.target],
         tabs,
         endOfRestriction.toLocaleTimeString()
       );
 
-      this.am.setAlarm(
+      am.setAlarm(
         this.parsed.target + "-consecutive-time-restriction-end",
         { delayInMinutes: entity.todayRestrictions?.consecutiveTime.pause / 60 }
       );
@@ -434,6 +300,8 @@ class ConsecutiveTimeAlarmHandler {
       throw new Error("Wrong phase is being called", this.parsed.phase);
     }
 
-    await this.manager.deleteAlarm(this.parsed.originalName);
+    await am.deleteAlarm(this.parsed.originalName);
   }
 }
+
+export { ConsecutiveTimeAlarmHandler, TimeSlotAlarmHandler }; // test-only
