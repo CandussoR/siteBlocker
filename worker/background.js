@@ -68,7 +68,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     return;
   }
 
-  if (host == this.rm.getSiteFocused()) return;
+  if (host == rm.getSiteFocused()) return;
   await processOrEnqueue("change-focus", activeInfo.tabId, host);
 });
 
