@@ -35,17 +35,14 @@ describe('Logger', () => {
 
   it('should dequeue and write logs to storage on flush()', async () => {
     logger.debug({ debug: "value" });
-    console.log(JSON.stringify(logger.queue))
     logger.info({ info: "value" });
 
-    console.log(JSON.stringify(logger.queue))
     await logger.flush();
 
     const storedLogs = global.chrome.storage.local._store.logs;
     expect(storedLogs.length).toBe(2);
-    console.log(storedLogs)
-    expect(storedLogs[0]).toContain('DEBUG');
-    expect(storedLogs[1]).toContain('INFO');
+    expect(storedLogs[0].level).toContain('DEBUG');
+    expect(storedLogs[1].level).toContain('INFO');
     expect(logger.queue.size).toBe(0);
   });
 

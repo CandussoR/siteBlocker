@@ -111,10 +111,9 @@ describe("isRestricted", () => {
     ec.sites = [mockSite]
     ec.groups = [group]
     let ret = isRestricted("test.com", ec, rm);
-    console.log(ret)
     expect(ret.violated).toBe(false);
     expect(ret.minutesBeforeRes).toBe(30);
     expect(ret.restriction).toBe("consecutiveTime")
-    expect(ret.name).toBe("Test");
+    expect(ret.entity).toBe("Test");
   });
 });
