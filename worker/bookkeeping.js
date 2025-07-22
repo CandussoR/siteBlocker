@@ -57,13 +57,13 @@ export class Bookkeeper {
   async handleOpen() {
     // logger.debug("Handling open with site", this.todayRecord, this.tabId)
     // logger.info("handleOpen : todayRecord", this.todayRecord);
+
     // Deleting tab from last domain if it has changed
     const tabSite = this.rm.getSiteOfTab(this.tabId);
     if (tabSite && tabSite !== this.host) {
       await this.handleClose();
     }
 
-    // Ascribing tab to domain
     this.rm.addTabToSite(this.host, this.tabId);
 
     // Handling focus and initDate
