@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { RecordManager } from "../worker/recordManager";
+import { RecordManager } from "../../worker/recordManager";
 
 describe('recordManager', () => {
     beforeEach(() => {

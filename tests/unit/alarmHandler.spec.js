@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, expect, vi } from 'vitest';
-import { TimeSlotAlarmHandler, ConsecutiveTimeAlarmHandler } from '../worker/alarmsHandler.js';
-import { EntitiesCache, Site } from '../worker/siteAndGroupModels.js';
-import { TabManager } from '../worker/tabManager.js';
+import { TimeSlotAlarmHandler, ConsecutiveTimeAlarmHandler } from '../../worker/alarmsHandler.js';
+import { EntitiesCache, Site } from '../../worker/siteAndGroupModels.js';
 
 describe("alarms setup", () => {
   beforeEach(() => {

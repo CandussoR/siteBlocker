@@ -1,7 +1,7 @@
 import { describe } from "vitest";
-import { isRestricted } from "../worker/restrictionsHandler";
-import { Site, Group, EntitiesCache } from "../worker/siteAndGroupModels";
-import { RecordManager } from "../worker/recordManager";
+import { isRestricted } from "../../worker/restrictionsHandler";
+import { Site, Group, EntitiesCache } from "../../worker/siteAndGroupModels";
+import { RecordManager } from "../../worker/recordManager";
 
 describe("isRestricted", () => {
   beforeEach(() => {

@@ -1,6 +1,6 @@
 import { beforeEach, describe } from "vitest";
-import { TimeSlotRestriction } from "../worker/restrictions";
-import { EntitiesCache, Group, Site } from "../worker/siteAndGroupModels";
+import { TimeSlotRestriction } from "../../worker/restrictions";
+import { EntitiesCache, Group, Site } from "../../worker/siteAndGroupModels";
 
 describe('TimeSlotRestriction', () => {
     beforeEach(() => {

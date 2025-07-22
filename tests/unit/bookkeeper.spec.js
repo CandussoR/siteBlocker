@@ -1,6 +1,6 @@
 import { expect, describe, it, beforeEach, vi, afterEach } from 'vitest'
-import { RecordManager } from '../worker/recordManager.js';
-import { Bookkeeper } from '../worker/bookkeeping.js';
+import { RecordManager } from '../../worker/recordManager.js';
+import { Bookkeeper } from '../../worker/bookkeeping.js';
 
 global.chrome = {
     tabs : {
@@ -28,7 +28,7 @@ describe('bookkeeping', () => {
         let mockRm = new RecordManager(todayRecord);
         let mockBk = new Bookkeeper(mockRm, 1, 'test.com')
         global.chrome.tabs.query = vi.fn()
-        global.chrome.tabs.query.mockResolvedValue([{url: "http://test.com"}])
+        global.chrome.tabs.query.mockResolvedValue([{url: "http://test2.com"}])
         let expectedRecord = {}
         expectedRecord[currDate] = {
             "test.com": { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 0, },

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { AlarmManager } from "../worker/alarmManager";
+import { AlarmManager } from "../../worker/alarmManager.js";
 
 describe('alarmManager', () => {
     it('should set a consecutive time if there is none for entity', async () => {
