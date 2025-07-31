@@ -57,6 +57,7 @@ export class AlarmManager {
       );
     else return this.alarms.filter((x) => x[x.length - 1] === "n");
   }
+
   getEndAlarms(hostOrGroupName) {
     if (hostOrGroupName)
       return this.alarms.filter(
@@ -73,12 +74,17 @@ export class AlarmManager {
   }
 
   /**
+   * Needs to have called the initialisation function first !
    * @param {string} host 
    * @param {string} group - name of the group the host belongs to if any
-   * @returns {boolean} if there is one or more end alarm
+   * @returns {boolean} if there is one or more check alarm
    */
   hasEndAlarm(host, group) {
-    return this.getEndAlarms(host).length || (group && this.getEndAlarms(group).length)
+    if (!this.alarms instanceof Array || this.alarms.length) {
+      this.loadAlarms();
+    }
+    const groupAlarms = group ? this.getCheckAlarms() : [];
+    return [...this.getCheckAlarms(host), ...groupAlarms]
   }
 
 
@@ -91,12 +97,11 @@ export class AlarmManager {
    * @param {Infos} infos - everything needed to handle stuff
    */
   handleRestrictionAlarm(infos) {
+
     if (!infos.vs.minutesBeforeRes) return;
     if (infos.vs.restriction === "timeSlot") return;
 
     switch (infos.vs.restriction) {
-      case "timeSlot":
-        return;
       case "consecutiveTime":
         this.#setUpCTA(infos);
         return
