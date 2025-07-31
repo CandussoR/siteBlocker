@@ -160,5 +160,8 @@ describe("alarms setup", () => {
       [{ url: "http://test.com", id: [1] }],
       sth.toLocaleTimeString()
     );
+
+    expect(mockAm.setAlarm).toHaveBeenCalledOnce();
+    expect(mockAm.setAlarm).toHaveBeenCalledWith("test.com-consecutive-time-restriction-end", {delayInMinutes : 1});
   });
 });

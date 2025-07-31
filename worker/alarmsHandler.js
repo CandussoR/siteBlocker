@@ -290,9 +290,8 @@ class ConsecutiveTimeAlarmHandler {
         endOfRestriction.toLocaleTimeString()
       );
 
-      am.setAlarm(
-        this.parsed.target + "-consecutive-time-restriction-end",
-        { delayInMinutes: entity.todayRestrictions?.consecutiveTime.pause / 60 }
+      am.setAlarm(this.parsed.target + "-consecutive-time-restriction-end", 
+        { delayInMinutes: entity.todayRestrictions?.consecutiveTime[0].pause / 60, }
       );
     } else if (this.parsed.phase === "check" || this.parsed.phase === "end") {
       this.rm.resetConsecutiveTime(entity);
@@ -304,4 +303,4 @@ class ConsecutiveTimeAlarmHandler {
   }
 }
 
-export { ConsecutiveTimeAlarmHandler, TimeSlotAlarmHandler }; // test-only
+// export { ConsecutiveTimeAlarmHandler, TimeSlotAlarmHandler }; // test-only
