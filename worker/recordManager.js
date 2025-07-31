@@ -1,4 +1,4 @@
-import { Site } from "./siteAndGroupModels";
+import { Site } from "./siteAndGroupModels.js";
 export class RecordManager {
   #records;
 
@@ -101,6 +101,8 @@ export class RecordManager {
   addTabToSite(site, tabId) {
     let siteRecord = this.getTodaySiteRecord(site);
     if (siteRecord.tabId instanceof Array && siteRecord.tabId.includes(tabId))
+      return;
+    if (siteRecord.tabId instanceof Array)
       siteRecord.tabId.push(tabId);
     else siteRecord.tabId = [tabId];
   }
@@ -108,14 +110,12 @@ export class RecordManager {
   async addFocusToSite(site) {
     let siteRecord = this.getTodaySiteRecord(site);
     siteRecord.focused = true;
-    siteRecord.initDate = Date.now();
-    console.log(this.todayRecord[site])
+    if (!siteRecord.initDate) siteRecord.initDate = Date.now();
   }
   /**
    *
-   * @returns {string} site - the name of the focused site
+   * @returns {string} the name of the focused site
    */
-
   getSiteFocused() {
     for (let site in this.todayRecord) {
       if (this.todayRecord[site].focused) {

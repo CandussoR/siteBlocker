@@ -58,6 +58,22 @@ describe('bookkeeping', () => {
         expect(mockRm.records).toStrictEqual(expectedRecord)
     })
 
+    it('shouldnt add the same tab to the same site', async () => {
+        let currDate = new Date().toISOString().split('T')[0] ;
+        let todayRecord = {}
+        todayRecord[currDate] = {
+            "test.com": { audible: false, focused: true, initDate: Date.now(), tabId: [1], totalTime: 0, },
+            "test2.com": { audible: false, focused: false, initDate: null, tabId: null, totalTime: 0, },
+        }
+        let mockRm = new RecordManager(todayRecord);
+        let mockBk = new Bookkeeper(mockRm, 1, 'test.com')
+        global.chrome.tabs.query = vi.fn()
+        global.chrome.tabs.query.mockResolvedValue([{url: "http://test.com"}])
+        await mockBk.handleOpen()
+        console.log(mockRm.getTodaySiteRecord("test.com"))
+        expect(mockRm.records).toStrictEqual(todayRecord)
+    })
+
     it("should handle consecutiveTime on close", async () => {
       let todayRecord = {
         "2025-07-12": {
