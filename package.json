@@ -7,11 +7,12 @@
     "doc": "jsdoc -r ./worker"
   },
   "devDependencies": {
+    "@types/node": "^24.0.15",
     "autoprefixer": "^10.4.21",
     "jsdoc": "^4.0.4",
     "postcss": "^8.5.3",
     "tailwindcss": "^4.1.8",
-    "vitest": "^2.0.4"
+    "vitest": "^2.1.9"
   },
   "dependencies": {
     "@tailwindcss/cli": "^4.1.8",
