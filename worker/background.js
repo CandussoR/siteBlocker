@@ -10,7 +10,7 @@ import { processOrEnqueue } from "./blocker.js";
 import { handleAlarms } from "./alarmsHandler.js";
 import { entitiesCache } from "./siteAndGroupModels.js";
 import {rm } from './recordManager.js';
-import { onTabActivated, onTabUpdated, onWindowFocusChanged, initializeSingletons } from "./hookHandler.js";
+import { onTabActivated, onTabUpdated, onWindowFocusChanged, initializeSingletons, onTabRemoved } from "./hookHandler.js";
 
 chrome.runtime.onInstalled.addListener(async () => {
   let { sites } = await chrome.storage.local.get("sites");
@@ -60,9 +60,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => { onTabActivated(activ
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => { onTabUpdated(entitiesCache, rm, tabId, changeInfo, tab); });
 
 chrome.tabs.onRemoved.addListener(async (tabId, _) => {
-  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
-  // check if tabId site is still audible or not FIRST
-  await processOrEnqueue("close", tabId);
+  await onTabRemoved(tabId);
 });
 
 // Fires if window is focused or not

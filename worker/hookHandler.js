@@ -4,6 +4,7 @@ import { entitiesCache, EntitiesCache } from "./siteAndGroupModels.js";
 import { processOrEnqueue } from "./blocker.js";
 import { isRestricted } from './restrictionsHandler.js';
 import { logger } from "./logger.js";
+import { ConsecutiveTimeRestriction } from "./restrictions.js";
 
 /**
  * 
@@ -67,7 +68,7 @@ export async function onTabUpdated(entitiesCache, rm, tabId, changeInfo, tab) {
 
   // Here the page has been redirected by an alarm or a restriction, no need to manage alarms
   if (url?.includes("ui/redirected/redirected.html")) {
-    await processOrEnqueue("close", tabId, new URL(url).host)
+    await processOrEnqueue("close", tabId)
     return;
   } else if (isAppPageOrNewTab(url) || !isInWatchedList(entitiesCache.sites, host)) {
     // checking for old focus
@@ -110,6 +111,16 @@ export async function onWindowFocusChanged(window) {
 
   await replaceConsecutiveTimeCheckAlarmByBegin(host, am, entitiesCache, rm)
   await processOrEnqueue("change-focus", tab.id, host);
+}
+
+export async function onTabRemoved(tabId) {
+  if (!entitiesCache.initialized) await initializeSingletons(entitiesCache, rm);
+  // check if tabId site is still audible or not FIRST
+  let tab = await chrome.tabs.get(tabId)
+  if (isAppPageOrNewTab(tab.url) || !isInWatchedList(entitiesCache.sites, new URL(tab.url).host)) {
+    return;
+  }
+  await processOrEnqueue("close", tabId);
 }
 
 function changeInUrl(changeInfo) {
