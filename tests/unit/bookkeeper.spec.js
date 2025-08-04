@@ -70,7 +70,6 @@ describe('bookkeeping', () => {
         global.chrome.tabs.query = vi.fn()
         global.chrome.tabs.query.mockResolvedValue([{url: "http://test.com"}])
         await mockBk.handleOpen()
-        console.log(mockRm.getTodaySiteRecord("test.com"))
         expect(mockRm.records).toStrictEqual(todayRecord)
     })
 
@@ -93,5 +92,61 @@ describe('bookkeeping', () => {
       expect(mockRm.records).toStrictEqual(result);
     });
 
+    it("should handle time and initDate even if close is called for a tab not in siteRecord tabId (bug)", async () => {
+        let todayRecord = {
+        "2025-07-12": {
+            "test.com": { audible: false, focused: false, initDate: Date.now(), tabId: [1], totalTime: 0 },
+          },
+      };
+      vi.setSystemTime(new Date(2025, 6, 12, 10, 2, 0));
+      let mockRm = new RecordManager(todayRecord);
+      let mockBk = new Bookkeeper(mockRm, 2, "test.com");
+      global.chrome.tabs.query = vi.fn();
+      let result = {
+          "2025-07-12": {
+            "test.com": { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 120 },
+          },
+      };
+      await mockBk.handleClose();
+      expect(mockRm.records).toStrictEqual(result); 
+    });
 
+    it("should handle consecutive time even if close is called for a tab is not in siteRecord tabId (bug)", async () => {
+        let todayRecord = {
+        "2025-07-12": {
+            "test.com": { audible: false, focused: false, initDate: Date.now(), tabId: [1], totalTime: 0, consecutiveTime : 0 },
+          },
+      };
+      vi.setSystemTime(new Date(2025, 6, 12, 10, 2, 0));
+      let mockRm = new RecordManager(todayRecord);
+      let mockBk = new Bookkeeper(mockRm, 2, "test.com");
+      global.chrome.tabs.query = vi.fn();
+      let result = {
+          "2025-07-12": {
+            "test.com": { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 120, consecutiveTime : 120 },
+          },
+      };
+      await mockBk.handleClose();
+      expect(mockRm.records).toStrictEqual(result); 
+    });
+
+    it("should reset consecutive time if no init date and no end alarm (bug)", async () => {
+       let todayRecord = {
+        "2025-07-12": {
+            "test.com": { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 120, consecutiveTime : 120 },
+          },
+      };
+      vi.setSystemTime(new Date(2025, 6, 12, 10, 2, 0));
+      let mockRm = new RecordManager(todayRecord);
+      let mockBk = new Bookkeeper(mockRm, 2, "test.com");
+      global.chrome.tabs.query = vi.fn();
+      let am = {loadAlarms : vi.fn().mockResolvedValue([]), hasEndAlarm : vi.fn()}
+      let result = {
+          "2025-07-12": {
+            "test.com": { audible: false, focused: false, initDate: null, tabId: [1], totalTime: 120, consecutiveTime : 0 },
+          },
+      };
+      await mockBk.handleClose(undefined, am);
+      expect(mockRm.records).toStrictEqual(result); 
+})
 });
