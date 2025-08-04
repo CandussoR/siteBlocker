@@ -1,4 +1,4 @@
-import { Site } from "./siteAndGroupModels.js";
+import { Site, Group } from "./siteAndGroupModels.js";
 export class RecordManager {
   #records;
 
@@ -75,8 +75,19 @@ export class RecordManager {
     siteRecord.consecutiveTime = Math.round((new Date() - siteRecord.initDate) / 1000);
   }
 
-  resetConsecutiveTime(entity) {
-    let sitesToReset = entity instanceof Site ? [entity.name] : entity.sites;
+  /**
+   * 
+   * @param {String|Site|Group} entityOrHost 
+   */
+  resetConsecutiveTime(entityOrHost) {
+    let sitesToReset = null
+    if (typeof entityOrHost === "string") {
+        sitesToReset = [entityOrHost];
+    } else if (entityOrHost instanceof Site) {
+        sitesToReset = [entityOrHost.name];
+    } else if (entityOrHost instanceof Group) {
+        sitesToReset = entityOrHost.sites;
+    }
     const record = this.todayRecord;
     sitesToReset.forEach((s) => {
       record[s].totaltime += record[s].consecutivetime;
