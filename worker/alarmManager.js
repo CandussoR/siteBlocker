@@ -79,9 +79,9 @@ export class AlarmManager {
    * @param {string} group - name of the group the host belongs to if any
    * @returns {boolean} if there is one or more check alarm
    */
-  hasEndAlarm(host, group) {
-    if (!this.alarms instanceof Array || this.alarms.length) {
-      this.loadAlarms();
+  async hasEndAlarm(host, group) {
+    if (!(this.alarms instanceof Array) || this.alarms.length) {
+      await this.loadAlarms();
     }
     const groupAlarms = group ? this.getCheckAlarms() : [];
     return [...this.getCheckAlarms(host), ...groupAlarms]

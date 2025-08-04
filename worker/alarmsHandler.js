@@ -283,7 +283,7 @@ class ConsecutiveTimeAlarmHandler {
     endOfRestriction = new Date(endOfRestriction.getTime() + pause * 1000)
 
     if (this.parsed.phase === "begin") {
-      let tabs = tabManager.getAll();
+      let tabs = await tabManager.getAll();
       tabManager.redirectTabsRestrictedByAlarm(
         this.parsed.isGroup ? entity.sites : [this.parsed.target],
         tabs,
@@ -296,7 +296,7 @@ class ConsecutiveTimeAlarmHandler {
     } else if (this.parsed.phase === "check" || this.parsed.phase === "end") {
       this.rm.resetConsecutiveTime(entity);
     }  else {
-      throw new Error("Wrong phase is being called", this.parsed.phase);
+      throw new Error(`Wrong phase is being called : ${this.parsed.phase}`);
     }
 
     await am.deleteAlarm(this.parsed.originalName);
