@@ -1,10 +1,12 @@
 import { logger } from "./logger.js";
 import { RecordManager, rm } from "./recordManager.js";
+import { AlarmManager } from "./alarmManager.js";
 
 export async function bookkeeping(flag, tabId = undefined, host = undefined) {
     try {
         const bookkeeper = new Bookkeeper(rm, tabId, host);
-        logger.info( "Entering bookkeeping with",
+        logger.info(
+            "Entering bookkeeping with",
             JSON.parse(JSON.stringify(rm.todayRecord))
         );
         switch (flag) {
@@ -30,12 +32,21 @@ export async function bookkeeping(flag, tabId = undefined, host = undefined) {
                 logger.error("There's a typo in flag", flag);
         }
 
-        logger.debug( "todayRecord, after the switch case",
+        logger.debug(
+            "todayRecord, after the switch case",
             JSON.parse(JSON.stringify(rm.todayRecord))
         );
         await rm.save();
     } catch (error) {
-        logger.error("Error in bookkeeping, avorting any change : ", error);
+        if (error instanceof Error) {
+            logger.error(
+                "Error in bookkeeping, aborting any change: ",
+                error.message
+            );
+            logger.debug("Stack trace:", error.stack);
+        } else {
+            logger.error("Error in bookkeeping, aborting any change: ", error);
+        }
     }
 }
 
@@ -61,7 +72,7 @@ export class Bookkeeper {
         // Deleting tab from last domain if it has changed
         const tabSite = this.rm.getSiteOfTab(this.tabId);
         if (tabSite && tabSite !== this.host) {
-            await this.handleClose();
+            await this.handleClose(tabSite);
         }
 
         this.rm.addTabToSite(this.host, this.tabId);
@@ -79,28 +90,40 @@ export class Bookkeeper {
 
     /**
      *
-     * Called on close or for redirection
-     * @returns {object} this.rm.todayRecord[host]
+     * Called on close or for redirection.
+     * Only handleOpen should call the function with a host parameter.
+     * @param {String|undefined} host -- a different host than this.host, used to switch tab from one site to another
+     * @param {AlarmManager} am -- only passed to make dependency explicit and to ease testing, used when resetting consecutive time
      */
-    async handleClose() {
-        let siteRecord = this.rm.getTodaySiteRecord(
-            this.rm.getSiteOfTab(this.tabId)
-        );
+    async handleClose(host = undefined, am = new AlarmManager()) {
+        // only handleOpen gives a host different than this.host, but keeps this.tabId
+        // otherwise, we ALWAYS have this.tabId
+        logger.debug("Entering handleClose", this.tabId, host, this.host);
+        let h = host && host !== this.host
+                ? host
+                : this.rm.getSiteOfTab(this.tabId);
+
+        if (!h) {
+            h = this.host;
+        }
+
+        let siteRecord = this.rm.getTodaySiteRecord(h);
 
         if (!siteRecord) {
-            throw new Error(
+            // Close shouldn't have been called if no tabId in records AND host not monitored.
+            logger.warning(
                 "No siteRecord for this tabId",
                 this.tabId,
                 this.rm.todayRecord
             );
+            return;
         }
 
         if (!siteRecord.tabId) {
             throw new Error(
-                "Trying to close a tab that has not been added",
-                this.host,
-                this.tabId,
-                siteRecord
+                "Trying to close a tab that has not been added." +
+                    ` host=${this.host}, tabId=${this.tabId},` +
+                    ` siteRecord=${JSON.stringify(siteRecord)}`
             );
         }
 
@@ -111,24 +134,22 @@ export class Bookkeeper {
                 siteRecord.tabId.length > 1
             ) {
                 // if multiple Spotify tabs and one is closed while we listen, for example
-                if (
-                    siteRecord.audible &&
-                    (await this.shouldToggleAudible(site))
-                ) {
+                if (siteRecord.audible && (await this.shouldToggleAudible(h))) {
                     siteRecord.audible = false;
                 }
-                logger.info("Filtering tabId", siteRecord);
+                logger.info("Filtering tabId", siteRecord, siteRecord.tabId);
                 let filt = siteRecord.tabId.filter((x) => x !== this.tabId);
                 siteRecord.tabId = filt.length ? filt : null;
             } else {
-                siteRecord.tabId = null;
+                if (siteRecord.tabId[0] === this.tabId) {
+                    siteRecord.tabId = null;
+                }
                 siteRecord.focused = false;
                 siteRecord.audible = false;
             }
         } catch (e) {
-            logger.error(
-                "Problem when handling the reset of siteRecord in close",
-                e
+            throw new Error(
+                `Problem when handling the reset of siteRecord in close : ${e}`
             );
         }
 
@@ -136,19 +157,32 @@ export class Bookkeeper {
         if (siteRecord.audible) return;
 
         if (!siteRecord.initDate) {
-            logger.warning( `[Bookkeeper][${this.host}] Missing initDate : ` +
-                "won't compute totalTime or consecutiveTime",
-                this.host, this.siteRecord
+            logger.warning(
+                `[Bookkeeper][${this.host}] Missing initDate : `,
+                this.host,
+                this.siteRecord
             );
+
+            // Breaking the responsibility thing but feels clearer
+            let endAlarms = await am.hasEndAlarm(h);
+            if (!endAlarms.length && siteRecord.consecutiveTime) {
+                logger.debug("No -end alarms and consecutiveTime, we reset it");
+                siteRecord.consecutiveTime = 0;
+            }
+
             return;
         }
 
-        // Only alarm handler resets consecutiveTime on -check alarms, just set
-        // If reset by begin alarm, already reset, no initDate,
-        // close called by redirection.
-        this.rm.setConsecutiveTime(this.host);
+        // Only alarm handler resets consecutiveTime on -check or -end alarms,
+        // here we just set the consecutive time for the violation check.
+        // If reset by begin alarm, no initDate, and handleClose is called by the redirection.
+        if ("consecutiveTime" in siteRecord) {
+            this.rm.setConsecutiveTime(h);
+        }
 
-        siteRecord.totalTime += Math.round( (Date.now() - siteRecord.initDate) / 1000);
+        siteRecord.totalTime += Math.round(
+            (Date.now() - siteRecord.initDate) / 1000
+        );
 
         siteRecord.initDate = null;
     }
